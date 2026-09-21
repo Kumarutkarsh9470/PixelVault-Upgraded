@@ -1,0 +1,14 @@
+{
+  "name": "pixelvault-racer-deploy",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}

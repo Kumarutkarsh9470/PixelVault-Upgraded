@@ -1,0 +1,82 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #0b0f1a;
+  color: #e6edf6;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.muted {
+  color: #8ea3bb;
+  margin: 0;
+}
+
+.card {
+  background: #121a2b;
+  border: 1px solid #1f2a40;
+  border-radius: 12px;
+  padding: 6px 14px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #1a2438;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.mono {
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #22d3ee, #f472b6);
+  color: #0b0f1a;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+button.secondary {
+  background: transparent;
+  color: #8ea3bb;
+  border: 1px solid #1f2a40;
+}
+
+.status {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.explorer {
+  color: #22d3ee;
+}

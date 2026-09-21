@@ -1,0 +1,33 @@
+# Secrets (devnet fee-payer keys, env files)
+secrets/
+.env
+.env.*
+
+# Node
+node_modules/
+web/dist/
+
+# Anchor / Rust
+pixelvault/target/
+pixelvault/.anchor/
+pixelvault/test-ledger/
+
+# Unity
+game/[Ll]ibrary/
+game/[Tt]emp/
+game/[Oo]bj/
+game/[Ll]ogs/
+game/[Bb]uilds/
+game/[Uu]ser[Ss]ettings/
+game/*.csproj
+game/*.sln
+game/.vs/
+game-*.log
+
+# Vercel
+deploy/racer/.vercel/
+
+# Generated build output copied into the deploy folder (rebuilt from game/ and web/)
+deploy/racer/Build/
+deploy/racer/wallet/
+deploy/racer/index.html

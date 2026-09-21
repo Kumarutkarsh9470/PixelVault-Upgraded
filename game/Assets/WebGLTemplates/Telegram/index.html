@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>{{{ PRODUCT_NAME }}}</title>
+  <!-- Captured before the SDK loads, because the SDK strips its launch parameters from the URL. -->
+  <script>window.__launchHash = window.location.hash || "";</script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b0f1a; overflow: hidden; touch-action: none; }
+    #unity-canvas { width: 100vw; height: 100vh; display: block; background: #0b0f1a; }
+    #loader { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #cfe8ff; font: 600 16px system-ui, sans-serif; }
+    #bar { width: 60vw; max-width: 320px; height: 8px; background: #1c2436; border-radius: 4px; overflow: hidden; }
+    #fill { height: 100%; width: 0; background: linear-gradient(90deg, #22d3ee, #f472b6); }
+    #stats { position: fixed; left: 8px; bottom: 8px; padding: 6px 8px; border-radius: 6px; background: rgba(0, 0, 0, .5); color: #9fb3c8; font: 12px ui-monospace, monospace; white-space: pre; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+  <div id="loader">
+    <div>Loading PixelVault Racer</div>
+    <div id="bar"><div id="fill"></div></div>
+    <div id="pct">0%</div>
+  </div>
+  <div id="stats"></div>
+  <script>
+    var tg = window.Telegram && window.Telegram.WebApp;
+    // Telegram passes launch parameters in the URL hash; read them directly as
+    // well, so detection still works if the SDK failed to load or parse them.
+    var launchHash = window.__launchHash || "";
+    var hashPlatform = (launchHash.match(/tgWebAppPlatform=([^&]+)/) || [])[1];
+    var platform = tg && tg.platform && tg.platform !== "unknown" ? tg.platform : hashPlatform;
+    var inTelegram = !!platform || !!(tg && tg.initData);
+    if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+
+    // Counts page loads within this tab session, so a reload loop shows up
+    // as a climbing number instead of an endless progress bar.
+    var loads = 1;
+    try {
+      loads = Number(sessionStorage.getItem("pv_loads") || 0) + 1;
+      sessionStorage.setItem("pv_loads", String(loads));
+    } catch (e) {}
+
+    var statsEl = document.getElementById("stats");
+    function stat(line) {
+      statsEl.textContent = [
+        "env: " + (inTelegram ? "Telegram " + (platform || "?") : "browser"),
+        "sdk: " + (tg ? "v" + tg.version + " platform=" + tg.platform : "not loaded") +
+          " initData=" + (tg && tg.initData ? tg.initData.length : 0),
+        "launch params: " + (launchHash.indexOf("tgWebApp") >= 0 ? "yes" : "no"),
+        "loads this session: " + loads,
+        line
+      ].join("\n");
+    }
+    stat("loading...");
+
+    var buildUrl = "Build";
+    var config = {
+      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_WASM
+      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+#endif
+#if MEMORY_FILENAME
+      memoryUrl: buildUrl + "/{{{ MEMORY_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+      symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
+#endif
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+      productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+      productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+    };
+
+    var script = document.createElement("script");
+    script.src = buildUrl + "/{{{ LOADER_FILENAME }}}";
+    script.onload = function () {
+      createUnityInstance(document.querySelector("#unity-canvas"), config, function (progress) {
+        var pct = Math.round(progress * 100);
+        document.getElementById("fill").style.width = pct + "%";
+        document.getElementById("pct").textContent = pct + "%";
+      }).then(function () {
+        document.getElementById("loader").style.display = "none";
+        // performance.now() counts from navigation start: this is the full
+        // wait a player experiences, not just the Unity portion.
+        stat("loaded in " + (performance.now() / 1000).toFixed(1) + "s");
+      }).catch(function (err) {
+        stat("LOAD FAILED: " + err);
+      });
+    };
+    script.onerror = function () { stat("LOAD FAILED: loader script"); };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
