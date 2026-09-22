@@ -33,10 +33,10 @@ Devnet program: `AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ`
 ```bash
 cd pixelvault
 anchor build
-cargo +stable test
+cargo test
 ```
 
-The workspace pins Rust 1.89 for SBF builds; tests run on stable because litesvm 0.16 needs a newer compiler.
+The workspace pins Rust 1.98.1 for host builds (tests and IDL generation). On-chain binaries are always compiled by the Solana toolchain's own bundled compiler.
 
 **Web** (writes into `deploy/racer/wallet`):
 

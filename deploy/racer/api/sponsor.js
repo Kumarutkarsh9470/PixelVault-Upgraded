@@ -1,15 +1,24 @@
 // Fee-payer relayer. GET returns what a client needs to build a sponsored
 // transaction; POST verifies a player-signed transaction, co-signs it as fee
 // payer and submits it. Players never need to hold SOL.
+import { createHash } from "node:crypto";
 import { Connection, Keypair, VersionedTransaction } from "@solana/web3.js";
 
 const RPC_URL = process.env.RPC_URL || "https://api.devnet.solana.com";
 
-// Only these programs may appear in a sponsored transaction.
-const SPONSORED_PROGRAMS = new Set([
-  "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr", // SPL Memo
-  "AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ", // PixelVault vault program
-]);
+const PIXELVAULT_PROGRAM = "AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ";
+const MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+const ED25519_PROGRAM = "Ed25519SigVerify111111111111111111111111111";
+
+// Only these programs may appear in a sponsored transaction. The Compute
+// Budget program is deliberately absent: it would let a client attach an
+// arbitrary priority fee that the sponsor pays.
+const SPONSORED_PROGRAMS = new Set([PIXELVAULT_PROGRAM, MEMO_PROGRAM, ED25519_PROGRAM]);
+
+// In `craft`, account 1 is `rent_payer`: the only role the sponsor may play in
+// any instruction. The program itself limits what rent it pays for.
+const CRAFT_DISCRIMINATOR = createHash("sha256").update("global:craft").digest().subarray(0, 8);
+const RENT_PAYER_POSITION = 1;
 
 let cachedFeePayer;
 
@@ -24,6 +33,10 @@ function feePayer() {
   return cachedFeePayer;
 }
 
+function isCraft(data) {
+  return data.length >= 8 && Buffer.from(data.subarray(0, 8)).equals(CRAFT_DISCRIMINATOR);
+}
+
 /** Returns why a transaction must not be sponsored, or null if it is safe. */
 export function rejectReason(tx, sponsor) {
   const message = tx.message;
@@ -35,16 +48,25 @@ export function rejectReason(tx, sponsor) {
   if (!keys[0].equals(sponsor)) {
     return "fee payer must be the sponsor";
   }
+
   for (const ix of message.compiledInstructions) {
     const program = keys[ix.programIdIndex].toBase58();
     if (!SPONSORED_PROGRAMS.has(program)) {
       return `program ${program} is not sponsored`;
     }
-    // The sponsor pays fees and nothing else: no instruction may touch its account.
-    if (ix.accountKeyIndexes.includes(0)) {
-      return "instructions may not use the sponsor account";
-    }
+
+    ix.accountKeyIndexes.forEach((keyIndex, position) => {
+      if (keyIndex !== 0) {
+        return;
+      }
+      const allowed =
+        program === PIXELVAULT_PROGRAM && isCraft(ix.data) && position === RENT_PAYER_POSITION;
+      if (!allowed) {
+        throw new Error("instructions may only use the sponsor as the rent payer of craft");
+      }
+    });
   }
+
   for (let i = 1; i < message.header.numRequiredSignatures; i++) {
     if (tx.signatures[i].every((b) => b === 0)) {
       return "transaction is missing a required player signature";
@@ -76,7 +98,12 @@ export default async function handler(req, res) {
     }
     const tx = VersionedTransaction.deserialize(Buffer.from(body.transaction, "base64"));
 
-    const reason = rejectReason(tx, sponsor.publicKey);
+    let reason;
+    try {
+      reason = rejectReason(tx, sponsor.publicKey);
+    } catch (e) {
+      reason = e.message;
+    }
     if (reason) {
       return res.status(400).json({ error: reason });
     }

@@ -1,147 +1,149 @@
-import { useEffect, useState } from "react";
-import { useLogin, usePrivy } from "@privy-io/react-auth";
-import { useSignTransaction, useWallets } from "@privy-io/react-auth/solana";
+import { useCallback, useEffect, useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 
-import { SOLANA_CHAIN } from "./config";
-import { fetchSolBalance, submitSponsoredMemo } from "./sponsor";
+import { UnityStage } from "./components/UnityStage";
+import type { RunResult } from "./lib/api";
+import { prepareTelegram } from "./lib/telegram";
+import { sendToUnity, type Loadout, type RaceFinished } from "./lib/unity";
+import { Garage } from "./screens/Garage";
+import { Home, tracks, type Track } from "./screens/Home";
+import { Race } from "./screens/Race";
+import { Ranks } from "./screens/Ranks";
+import { Results } from "./screens/Results";
+import { Vault } from "./screens/Vault";
+import { useGame } from "./state/game";
 
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: {
-        platform?: string;
-        initData?: string;
-        initDataUnsafe?: { user?: { username?: string } };
-        ready?: () => void;
-        expand?: () => void;
-      };
-    };
+type Screen = "home" | "race" | "results" | "garage" | "vault" | "ranks";
+
+const ghostKey = (trackId: string) => `pv_ghost_${trackId}`;
+
+function trackPayload(track: Track, loadout: Loadout) {
+  let ghost = null;
+  try {
+    ghost = JSON.parse(localStorage.getItem(ghostKey(track.id)) || "null");
+  } catch {
+    ghost = null;
   }
+  return {
+    id: track.id,
+    name: track.name,
+    laps: track.laps,
+    width: track.width,
+    points: track.points,
+    theme: track.theme,
+    ghost,
+    loadout,
+  };
 }
-
-const telegram = window.Telegram?.WebApp;
-const inTelegram = !!telegram?.platform && telegram.platform !== "unknown";
-// Privy validates this signed launch data against the bot token set in its
-// dashboard; if it is missing, seamless login cannot work at all.
-const launchDataLength = telegram?.initData?.length ?? 0;
-const launchUser = telegram?.initDataUnsafe?.user?.username;
 
 export default function App() {
-  const { ready, authenticated, user, logout } = usePrivy();
-  // The Privy modal only says "Something went wrong"; the callback carries the code.
-  const { login } = useLogin({
-    onError: (error) => setStatus("Login error: " + String(error)),
-  });
-  const { wallets } = useWallets();
-  const { signTransaction } = useSignTransaction();
+  const { ready: privyReady, authenticated, login } = usePrivy();
+  const game = useGame();
+  const [screen, setScreen] = useState<Screen>("home");
+  const [trackId, setTrackId] = useState(tracks[0].id);
+  const [unityReady, setUnityReady] = useState(false);
+  const [finished, setFinished] = useState<RaceFinished | null>(null);
+  const [result, setResult] = useState<RunResult | null>(null);
+  const [resultError, setResultError] = useState<string | null>(null);
 
-  const wallet = wallets[0];
-  const [balance, setBalance] = useState<number | null>(null);
-  const [status, setStatus] = useState("");
-  const [signature, setSignature] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const track = tracks.find((t) => t.id === trackId) ?? tracks[0];
+
+  useEffect(prepareTelegram, []);
+
+  // The menu shows the selected track behind the UI.
+  useEffect(() => {
+    if (unityReady && screen === "home") {
+      sendToUnity("LoadTrack", trackPayload(track, game.loadout));
+      sendToUnity("ShowMenu");
+    }
+    // Loadout changes are applied separately without rebuilding the track.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unityReady, screen, trackId]);
 
   useEffect(() => {
-    telegram?.ready?.();
-    telegram?.expand?.();
-  }, []);
+    if (unityReady && screen !== "garage") sendToUnity("SetLoadout", game.loadout);
+  }, [unityReady, game.loadout, screen]);
 
-  useEffect(() => {
-    if (!wallet) {
-      return;
-    }
-    fetchSolBalance(wallet.address)
-      .then(setBalance)
-      .catch(() => setBalance(null));
-  }, [wallet?.address, signature]);
+  const startRace = useCallback(() => {
+    // Rebuilt at every start so the latest ghost and loadout are used.
+    sendToUnity("LoadTrack", trackPayload(track, game.loadout));
+    setScreen("race");
+  }, [track, game.loadout]);
 
-  async function sendSponsored() {
-    if (!wallet) {
-      return;
-    }
-    setBusy(true);
-    setSignature(null);
-    try {
-      setStatus("Building transaction…");
-      const sig = await submitSponsoredMemo(wallet.address, async (unsigned) => {
-        setStatus("Signing with your embedded wallet…");
-        const { signedTransaction } = await signTransaction({
-          transaction: unsigned,
-          wallet,
-          chain: SOLANA_CHAIN,
-        });
-        setStatus("Sponsor is co-signing and submitting…");
-        return signedTransaction;
-      });
-      setSignature(sig);
-      setStatus("Confirmed on devnet. You paid no fees.");
-    } catch (e) {
-      setStatus("Failed: " + (e instanceof Error ? e.message : String(e)));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const telegramName = user?.telegram?.username ? "@" + user.telegram.username : null;
-
-  return (
-    <main>
-      <h1>PixelVault Wallet</h1>
-      <p className="muted">Wallet spike · devnet</p>
-
-      <section className="card">
-        <Row label="Environment" value={inTelegram ? `Telegram ${telegram?.platform}` : "Browser"} />
-        <Row label="Domain" value={window.location.host} mono />
-        <Row
-          label="Launch data"
-          value={launchDataLength ? `${launchDataLength} chars${launchUser ? " · @" + launchUser : ""}` : "none"}
-        />
-        <Row label="Privy" value={ready ? "Ready" : "Loading…"} />
-        <Row label="Signed in" value={authenticated ? telegramName ?? user?.email?.address ?? "Yes" : "No"} />
-        {wallet && <Row label="Wallet" value={short(wallet.address)} mono />}
-        {wallet && <Row label="SOL balance" value={balance === null ? "…" : balance.toFixed(4)} />}
-      </section>
-
-      {!ready ? null : !authenticated ? (
-        <button onClick={login}>Sign in</button>
-      ) : !wallet ? (
-        <p className="muted">Creating your wallet…</p>
-      ) : (
-        <button onClick={sendSponsored} disabled={busy}>
-          {busy ? "Working…" : "Sign a sponsored transaction"}
-        </button>
-      )}
-
-      {status && <p className="status">{status}</p>}
-      {signature && (
-        <a
-          className="explorer"
-          href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          View on Solana Explorer
-        </a>
-      )}
-
-      {authenticated && (
-        <button className="secondary" onClick={logout}>
-          Sign out
-        </button>
-      )}
-    </main>
+  const onFinish = useCallback(
+    (race: RaceFinished) => {
+      setFinished(race);
+      setResult(null);
+      setResultError(null);
+      setScreen("results");
+      game
+        .submitRun(race)
+        .then((r) => {
+          setResult(r);
+          if (r.valid && r.personalBest) {
+            localStorage.setItem(ghostKey(race.trackId), JSON.stringify(race.ghost));
+          }
+        })
+        .catch((e) => setResultError(e.message));
+    },
+    [game],
   );
-}
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  const onUnityReady = useCallback(() => setUnityReady(true), []);
+  const goHome = useCallback(() => setScreen("home"), []);
+
   return (
-    <div className="row">
-      <span className="muted">{label}</span>
-      <span className={mono ? "mono" : undefined}>{value}</span>
+    <div className="app">
+      <UnityStage onReady={onUnityReady} />
+
+      {privyReady && !authenticated && (
+        <div className="gate">
+          <div className="gate-card">
+            <div className="logo big">
+              PIXEL<span>VAULT</span>
+            </div>
+            <p>Race, earn materials, and craft cosmetics you can always cash back out.</p>
+            <button className="primary big" onClick={login}>
+              Sign in
+            </button>
+          </div>
+        </div>
+      )}
+
+      {authenticated && !game.ready && unityReady && (
+        <div className="gate">
+          <p className="muted">{game.error ?? "Setting up your garage…"}</p>
+        </div>
+      )}
+
+      {game.ready && (
+        <>
+          {screen === "home" && <Home trackId={trackId} onSelect={setTrackId} onRace={startRace} />}
+          {screen === "race" && <Race onFinish={onFinish} onQuit={goHome} />}
+          {screen === "results" && finished && (
+            <Results
+              finished={finished}
+              result={result}
+              error={resultError}
+              onAgain={startRace}
+              onGarage={() => setScreen("garage")}
+              onHome={goHome}
+            />
+          )}
+          {screen === "garage" && <Garage onBack={goHome} />}
+          {screen === "vault" && <Vault onBack={goHome} />}
+          {screen === "ranks" && <Ranks onBack={goHome} />}
+
+          {screen === "home" && (
+            <nav className="bottom-nav">
+              <button className="active">Race</button>
+              <button onClick={() => setScreen("garage")}>Garage</button>
+              <button onClick={() => setScreen("vault")}>Vault</button>
+              <button onClick={() => setScreen("ranks")}>Ranks</button>
+            </nav>
+          )}
+        </>
+      )}
     </div>
   );
-}
-
-function short(value: string) {
-  return value.slice(0, 4) + "…" + value.slice(-4);
 }

@@ -29,5 +29,6 @@ deploy/racer/.vercel/
 
 # Generated build output copied into the deploy folder (rebuilt from game/ and web/)
 deploy/racer/Build/
-deploy/racer/wallet/
+deploy/racer/data/*.json.bak
 deploy/racer/index.html
+deploy/racer/assets/

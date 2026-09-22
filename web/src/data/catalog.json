@@ -1,0 +1,146 @@
+{
+  "usdcDecimals": 6,
+  "materials": [
+    { "id": "neon-shard", "name": "Neon Shard", "track": "neon-harbor", "color": "#22d3ee" },
+    { "id": "sun-glass", "name": "Sun Glass", "track": "dune-rush", "color": "#ff9f1c" },
+    { "id": "frost-core", "name": "Frost Core", "track": "frostline", "color": "#7dd3fc" }
+  ],
+  "medalRewards": { "bronze": 1, "silver": 2, "gold": 3 },
+  "games": [
+    {
+      "gameId": 1,
+      "key": "neon-racer",
+      "name": "Neon Racer",
+      "items": [
+        {
+          "classId": 1,
+          "key": "chassis-futura",
+          "type": "chassis",
+          "name": "Futura",
+          "value": "race-future",
+          "price": 1000000,
+          "backingBps": 9000,
+          "maxSupply": 0,
+          "recipe": { "neon-shard": 3, "frost-core": 2 }
+        },
+        {
+          "classId": 2,
+          "key": "chassis-street",
+          "type": "chassis",
+          "name": "Street",
+          "value": "sedan-sports",
+          "price": 600000,
+          "backingBps": 8000,
+          "maxSupply": 0,
+          "recipe": { "sun-glass": 3 }
+        },
+        {
+          "classId": 3,
+          "key": "chassis-hot-hatch",
+          "type": "chassis",
+          "name": "Hot Hatch",
+          "value": "hatchback-sports",
+          "price": 600000,
+          "backingBps": 8000,
+          "maxSupply": 0,
+          "recipe": { "sun-glass": 2, "neon-shard": 2 }
+        },
+        {
+          "classId": 10,
+          "key": "glow-cyan-pulse",
+          "type": "underglow",
+          "name": "Cyan Pulse",
+          "value": "#22d3ee",
+          "price": 300000,
+          "backingBps": 7000,
+          "maxSupply": 0,
+          "recipe": { "neon-shard": 2 }
+        },
+        {
+          "classId": 11,
+          "key": "glow-solar-flare",
+          "type": "underglow",
+          "name": "Solar Flare",
+          "value": "#ff9f1c",
+          "price": 300000,
+          "backingBps": 7000,
+          "maxSupply": 0,
+          "recipe": { "sun-glass": 2 }
+        },
+        {
+          "classId": 12,
+          "key": "glow-aurora",
+          "type": "underglow",
+          "name": "Aurora",
+          "value": "#a78bfa",
+          "price": 300000,
+          "backingBps": 7000,
+          "maxSupply": 0,
+          "recipe": { "frost-core": 2 }
+        },
+        {
+          "classId": 20,
+          "key": "trail-magenta-streak",
+          "type": "trail",
+          "name": "Magenta Streak",
+          "value": "#f472b6",
+          "price": 250000,
+          "backingBps": 6000,
+          "maxSupply": 0,
+          "recipe": { "neon-shard": 1, "sun-glass": 1 }
+        },
+        {
+          "classId": 21,
+          "key": "trail-ion",
+          "type": "trail",
+          "name": "Ion",
+          "value": "#22c55e",
+          "price": 250000,
+          "backingBps": 6000,
+          "maxSupply": 0,
+          "recipe": { "frost-core": 1, "neon-shard": 1 }
+        },
+        {
+          "classId": 22,
+          "key": "trail-genesis-gold",
+          "type": "trail",
+          "name": "Genesis Gold",
+          "value": "#facc15",
+          "price": 1000000,
+          "backingBps": 9500,
+          "maxSupply": 100,
+          "recipe": { "neon-shard": 3, "sun-glass": 3, "frost-core": 3 }
+        }
+      ]
+    },
+    {
+      "gameId": 2,
+      "key": "glyph-forge",
+      "name": "Glyph Forge",
+      "items": [
+        {
+          "classId": 1,
+          "key": "frame-neon",
+          "type": "frame",
+          "name": "Neon Frame",
+          "value": "#22d3ee",
+          "price": 500000,
+          "backingBps": 8000,
+          "maxSupply": 0,
+          "recipe": {}
+        },
+        {
+          "classId": 2,
+          "key": "frame-obsidian",
+          "type": "frame",
+          "name": "Obsidian Frame",
+          "value": "#0f172a",
+          "price": 900000,
+          "backingBps": 9000,
+          "maxSupply": 0,
+          "recipe": {}
+        }
+      ]
+    }
+  ]
+}

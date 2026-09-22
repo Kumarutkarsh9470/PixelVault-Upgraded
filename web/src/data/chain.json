@@ -1,0 +1,9 @@
+{
+  "cluster": "devnet",
+  "rpc": "https://api.devnet.solana.com",
+  "programId": "AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ",
+  "usdcMint": "11111111111111111111111111111111",
+  "protocol": "11111111111111111111111111111111",
+  "protocolTreasury": "11111111111111111111111111111111",
+  "games": {}
+}

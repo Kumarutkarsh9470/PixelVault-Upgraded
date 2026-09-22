@@ -1,0 +1,12 @@
+# Keep LF everywhere: shell scripts and Rust tooling run inside WSL.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.so binary
+*.wasm binary
+*.br binary
+*.fbx binary
+*.glb binary
+*.ogg binary
+*.wav binary

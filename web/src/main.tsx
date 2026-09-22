@@ -5,6 +5,7 @@ import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 
 import App from "./App";
 import { PRIVY_APP_ID, RPC_URL, RPC_WS_URL } from "./config";
+import { GameProvider } from "./state/game";
 import "./styles.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -29,7 +30,9 @@ createRoot(document.getElementById("root")!).render(
         appearance: { theme: "dark", walletChainType: "solana-only" },
       }}
     >
-      <App />
+      <GameProvider>
+        <App />
+      </GameProvider>
     </PrivyProvider>
   </StrictMode>,
 );

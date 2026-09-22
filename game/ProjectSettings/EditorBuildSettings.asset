@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/TimeTrial.unity
-    guid: e881c1c40ebf93145a20fb815c78983c
+    path: Assets/Scenes/Game.unity
+    guid: c8785884a728bb644a435913a9834a56
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

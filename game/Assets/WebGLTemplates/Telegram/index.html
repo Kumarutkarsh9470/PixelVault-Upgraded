@@ -82,7 +82,9 @@
         var pct = Math.round(progress * 100);
         document.getElementById("fill").style.width = pct + "%";
         document.getElementById("pct").textContent = pct + "%";
-      }).then(function () {
+      }).then(function (instance) {
+        // Exposed for the host page and for manual testing from the console.
+        window.unityInstance = instance;
         document.getElementById("loader").style.display = "none";
         // performance.now() counts from navigation start: this is the full
         // wait a player experiences, not just the Unity portion.
