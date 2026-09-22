@@ -25,6 +25,7 @@ anchor-lang = { version = "1.2.0", features = ["init-if-needed"] }
 anchor-spl = "1.2.0"
 solana-instructions-sysvar = "3.0.1"
 solana-sdk-ids = "3.1.0"
+solana-sha256-hasher = "3.1.0"
 
 [dev-dependencies]
 litesvm = { version = "0.16.0", features = ["precompiles"] }

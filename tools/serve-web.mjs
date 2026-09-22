@@ -9,11 +9,29 @@ import { pathToFileURL } from "node:url";
 const root = path.resolve(process.argv[2] || "deploy/racer");
 const port = Number(process.argv[3] || 8080);
 
-// Local development only: load the devnet sponsor key from the gitignored
-// secrets folder. On Vercel it comes from the project's environment variables.
-const devKey = path.resolve("secrets/sponsor-devnet.json");
-if (!process.env.SPONSOR_SECRET_KEY && fs.existsSync(devKey)) {
-  process.env.SPONSOR_SECRET_KEY = fs.readFileSync(devKey, "utf8").trim();
+// Local development only. On Vercel these come from the project's environment
+// variables; here, from `vercel env pull` (deploy/racer/.env.local) and the
+// gitignored devnet keys in secrets/.
+const envFile = path.join(root, ".env.local");
+if (fs.existsSync(envFile)) {
+  for (const line of fs.readFileSync(envFile, "utf8").split(/\r?\n/)) {
+    const match = line.match(/^([A-Z0-9_]+)="?(.*?)"?$/);
+    // Sensitive variables cannot be pulled and arrive as placeholders.
+    if (match && !process.env[match[1]] && match[2] && match[2] !== "[SENSITIVE]") {
+      process.env[match[1]] = match[2];
+    }
+  }
+}
+const devKeys = {
+  SPONSOR_SECRET_KEY: "sponsor-devnet",
+  GRANT_SIGNER_SECRET: "grant-signer-devnet",
+  FUNDER_SECRET: "funder-devnet",
+};
+for (const [variable, file] of Object.entries(devKeys)) {
+  const keyPath = path.resolve(`secrets/${file}.json`);
+  if (!process.env[variable] && fs.existsSync(keyPath)) {
+    process.env[variable] = fs.readFileSync(keyPath, "utf8").trim();
+  }
 }
 
 const types = {

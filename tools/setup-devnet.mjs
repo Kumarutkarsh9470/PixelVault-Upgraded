@@ -126,7 +126,7 @@ async function main() {
     );
     console.log("created mock USDC mint", usdcMint.publicKey.toBase58());
   }
-  await fund(admin, funder.publicKey, 1);
+  await fund(admin, funder.publicKey, 0.25);
 
   // Protocol fee treasury: the admin's USDC account.
   const protocolTreasury = ata(admin.publicKey, usdcMint.publicKey);
@@ -156,7 +156,7 @@ async function main() {
   for (const game of catalog.games) {
     // Each game belongs to its own studio key, so studio revenue is distinct from protocol fees.
     const studio = secretKey(`studio-${game.key}-devnet`);
-    await fund(admin, studio.publicKey, 0.6);
+    await fund(admin, studio.publicKey, 0.2);
     const gameAddress = pda(Buffer.from("game"), u64(game.gameId));
     const vault = ata(gameAddress, usdcMint.publicKey);
     const treasury = ata(studio.publicKey, usdcMint.publicKey);

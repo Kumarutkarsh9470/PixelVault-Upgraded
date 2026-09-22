@@ -1,9 +1,10 @@
 // On-chain reads and grant signing for the game server.
+import { createHash } from "node:crypto";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import nacl from "tweetnacl";
 
 export const PROGRAM_ID = new PublicKey("AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ");
-const GRANT_DOMAIN = Buffer.from("PIXELVAULT_GRANT_V1");
+const GRANT_DOMAIN = Buffer.from("PIXELVAULT_GRANT_V2");
 /** How long a signed grant stays valid, in seconds. */
 export const GRANT_TTL_SECONDS = 180;
 
@@ -45,9 +46,9 @@ export async function nextGrantSeq(gameId, wallet) {
   return account.data.readBigUInt64LE(8 + 32 + 32);
 }
 
-/** Byte-for-byte the message `grant::grant_message` builds on-chain. */
+/** Byte-for-byte the digest `grant::grant_message` builds on-chain. */
 export function grantMessage(gameId, classId, wallet, seq, expiresAt) {
-  return Buffer.concat([
+  const fields = Buffer.concat([
     GRANT_DOMAIN,
     PROGRAM_ID.toBuffer(),
     gamePda(gameId).toBuffer(),
@@ -56,6 +57,7 @@ export function grantMessage(gameId, classId, wallet, seq, expiresAt) {
     u64(seq),
     i64(expiresAt),
   ]);
+  return createHash("sha256").update(fields).digest();
 }
 
 let signer;

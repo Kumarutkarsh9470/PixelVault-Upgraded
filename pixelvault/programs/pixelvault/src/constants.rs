@@ -28,7 +28,7 @@ pub const MAX_GAME_NAME_LEN: usize = 64;
 
 /// Domain separator for material grants, so a signature over grant bytes can
 /// never be mistaken for a signature over anything else.
-pub const GRANT_DOMAIN: &[u8] = b"PIXELVAULT_GRANT_V1";
+pub const GRANT_DOMAIN: &[u8] = b"PIXELVAULT_GRANT_V2";
 
 /// The only key allowed to initialise the protocol account.
 /// Must be replaced with the mainnet admin key before a mainnet build.

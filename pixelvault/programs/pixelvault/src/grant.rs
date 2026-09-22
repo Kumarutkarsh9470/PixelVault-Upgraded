@@ -7,6 +7,7 @@
 
 use anchor_lang::prelude::*;
 use solana_instructions_sysvar::{load_current_index_checked, load_instruction_at_checked};
+use solana_sha256_hasher::hashv;
 
 use crate::{constants::GRANT_DOMAIN, error::PixelVaultError};
 
@@ -17,7 +18,9 @@ const OFFSETS_LEN: usize = 14;
 /// Instruction index meaning "data lives in this same precompile instruction".
 const SELF_INSTRUCTION: u16 = u16::MAX;
 
-/// The exact bytes a game server signs to authorise one craft.
+/// The bytes a game server signs to authorise one craft: a SHA-256 digest of
+/// every grant field. Signing the 32-byte digest instead of the fields keeps
+/// transactions small enough for a cross-game route to fit in one.
 pub fn grant_message(
     game: &Pubkey,
     class_id: u64,
@@ -25,15 +28,17 @@ pub fn grant_message(
     seq: u64,
     expires_at: i64,
 ) -> Vec<u8> {
-    let mut message = Vec::with_capacity(GRANT_DOMAIN.len() + 32 * 3 + 24);
-    message.extend_from_slice(GRANT_DOMAIN);
-    message.extend_from_slice(crate::ID.as_ref());
-    message.extend_from_slice(game.as_ref());
-    message.extend_from_slice(&class_id.to_le_bytes());
-    message.extend_from_slice(player.as_ref());
-    message.extend_from_slice(&seq.to_le_bytes());
-    message.extend_from_slice(&expires_at.to_le_bytes());
-    message
+    hashv(&[
+        GRANT_DOMAIN,
+        crate::ID.as_ref(),
+        game.as_ref(),
+        &class_id.to_le_bytes(),
+        player.as_ref(),
+        &seq.to_le_bytes(),
+        &expires_at.to_le_bytes(),
+    ])
+    .to_bytes()
+    .to_vec()
 }
 
 pub fn verify_grant(instructions: &AccountInfo, signer: &Pubkey, message: &[u8]) -> Result<()> {

@@ -88,10 +88,10 @@ function ed25519Instruction(signer: Address, signature: Uint8Array, message: Uin
   return { programAddress: ED25519, accounts: [], data };
 }
 
-/** Byte-for-byte the message the program rebuilds in grant::grant_message. */
-function grantMessage(game: Address, classId: number, player: Address, seq: bigint, expiresAt: number): Uint8Array {
+/** Byte-for-byte the digest the program rebuilds in grant::grant_message. */
+async function grantMessage(game: Address, classId: number, player: Address, seq: bigint, expiresAt: number): Promise<Uint8Array> {
   const parts = [
-    new TextEncoder().encode("PIXELVAULT_GRANT_V1"),
+    new TextEncoder().encode("PIXELVAULT_GRANT_V2"),
     addressBytes(PROGRAM),
     addressBytes(game),
     getU64Encoder().encode(BigInt(classId)),
@@ -105,7 +105,7 @@ function grantMessage(game: Address, classId: number, player: Address, seq: bigi
     out.set(p, offset);
     offset += p.length;
   }
-  return out;
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", out));
 }
 
 const concat = (...parts: ArrayLike<number>[]) => {
@@ -127,7 +127,7 @@ export async function craftInstructions(player: Address, rentPayer: Address, gra
   const seq = BigInt(grant.seq);
 
   const signature = Uint8Array.from(atob(grant.signature), (c) => c.charCodeAt(0));
-  const message = grantMessage(gameAddress, grant.classId, player, seq, grant.expiresAt);
+  const message = await grantMessage(gameAddress, grant.classId, player, seq, grant.expiresAt);
 
   const craft: Instruction = {
     programAddress: PROGRAM,
