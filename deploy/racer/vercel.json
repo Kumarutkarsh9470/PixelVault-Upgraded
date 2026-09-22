@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/**/*.js": {
+      "includeFiles": "{data,db}/**"
+    }
+  },
   "headers": [
     {
       "source": "/Build/(.*).br",

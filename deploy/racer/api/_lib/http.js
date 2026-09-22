@@ -1,3 +1,4 @@
+import { databaseUrl, ensureSchema } from "./db.js";
 import { AuthError } from "./telegram.js";
 
 export class HttpError extends Error {
@@ -21,6 +22,9 @@ export function route(methods, handler) {
       return res.status(405).json({ error: "method not allowed" });
     }
     try {
+      if (databaseUrl()) {
+        await ensureSchema();
+      }
       const result = await handler(req, res);
       if (!res.headersSent) {
         res.status(200).json(result ?? {});
