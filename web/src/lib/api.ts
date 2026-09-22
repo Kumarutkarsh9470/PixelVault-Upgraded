@@ -31,6 +31,13 @@ export type Grant = {
   backingBps: number;
 };
 
+export type LeaderGhost = {
+  name: string;
+  totalMs: number;
+  splits: number[];
+  ghost: { interval: number; samples: number[] };
+};
+
 export type LeaderboardEntry = { rank: number; name: string; totalMs: number; at: string };
 
 async function call<T>(path: string, body?: Record<string, unknown>): Promise<T> {
@@ -48,13 +55,22 @@ async function call<T>(path: string, body?: Record<string, unknown>): Promise<T>
 
 export const api = {
   session: (wallet?: string) => call<Session>("/api/session", { wallet }),
-  submitRun: (run: { trackId: string; totalMs: number; laps: number; respawns: number; splits: number[] }) =>
+  submitRun: (run: {
+    trackId: string;
+    totalMs: number;
+    laps: number;
+    respawns: number;
+    splits: number[];
+    ghost: { interval: number; samples: number[] };
+  }) =>
     call<RunResult>("/api/run", run),
   grant: (wallet: string, gameId: number, classId: number) => call<Grant>("/api/grant", { wallet, gameId, classId }),
   starter: (wallet: string) => call<{ signature: string | null; amount: number }>("/api/starter", { wallet }),
   leaderboard: (trackId: string) =>
     call<{ entries: LeaderboardEntry[] }>(`/api/leaderboard?track=${encodeURIComponent(trackId)}`),
-  stats: () => call<Stats>("/api/stats"),
+  /** fresh skips the CDN cache, for right after the player changed the numbers. */
+  stats: (fresh = false) => call<Stats>(fresh ? `/api/stats?t=${Date.now()}` : "/api/stats"),
+  leader: (trackId: string) => call<{ leader: LeaderGhost | null }>(`/api/ghost?track=${encodeURIComponent(trackId)}`),
 };
 
 export type Stats = {

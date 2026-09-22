@@ -60,6 +60,13 @@ export function sendToUnity(method: string, payload?: unknown) {
   else queue.push([method, value]);
 }
 
+// ?debug exposes the bridge for testing scenes from the console. It grants
+// nothing a player could not already do in their own client: runs are still
+// checked by the server.
+if (new URLSearchParams(window.location.search).has("debug")) {
+  (window as unknown as { pvDebug: unknown }).pvDebug = { send: sendToUnity };
+}
+
 export function onUnity<T = unknown>(type: string, handler: (detail: T) => void): () => void {
   const listener = (e: Event) => handler((e as CustomEvent<T>).detail);
   window.addEventListener(`pixelvault:${type}`, listener);
@@ -81,4 +88,21 @@ export type RaceFinished = {
   ghost: { interval: number; samples: number[] };
 };
 
-export type Hud = { timeMs: number; lap: number; laps: number; speedKmh: number };
+export type Hud = {
+  timeMs: number;
+  lap: number;
+  laps: number;
+  speedKmh: number;
+  /** Car and ghost on the ground plane, in track coordinates. */
+  x: number;
+  z: number;
+  gx: number;
+  gz: number;
+  ghost: boolean;
+  drift: boolean;
+  /** Drift boost charge, 0-100. */
+  charge: number;
+  boost: boolean;
+};
+
+export type CheckpointEvent = { index: number; lap: number; timeMs: number };

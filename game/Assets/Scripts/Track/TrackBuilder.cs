@@ -64,7 +64,7 @@ public static class TrackBuilder
 
         BuildCheckpoints(track, railOffset);
         BuildStart(track, payload.width, railOffset);
-        Decorate(track, theme, railOffset, accent);
+        Scenery.Build(track, theme, railOffset, accent);
 
         StaticBatchingUtility.Combine(root);
         return track;
@@ -280,79 +280,6 @@ public static class TrackBuilder
         block.transform.SetPositionAndRotation(position, rotation);
         block.transform.localScale = scale;
         block.GetComponent<Renderer>().sharedMaterial = material;
-    }
-
-    static void Decorate(BuiltTrack track, ThemePayload theme, float railOffset, Color accent)
-    {
-        TrackPath path = track.Path;
-        Transform root = track.Root.transform;
-        string scenery = string.IsNullOrEmpty(theme.scenery) ? "city" : theme.scenery;
-
-        // Grandstands along the outside of the start straight, facing the road.
-        for (int i = -1; i <= 1; i++)
-        {
-            int sample = (i * 9 + path.Count) % path.Count;
-            PlaceOutside(track, "RacingKit/grandStandCovered", sample, railOffset + 15f, 7.5f, true);
-        }
-
-        // Light towers and scenery every so often around the lap.
-        int step = Mathf.Max(8, Mathf.RoundToInt(45f / path.Spacing));
-        int n = 0;
-        for (int sample = step; sample < path.Count - step; sample += step, n++)
-        {
-            PlaceOutside(track, "RacingKit/lightPostModern", sample, railOffset + 2.5f, 9f, false);
-            switch (scenery)
-            {
-                case "desert":
-                    PlaceOutside(track, n % 2 == 0 ? "RacingKit/tent" : "RacingKit/pylon", sample + step / 2, railOffset + 12f, n % 2 == 0 ? 7f : 2f, true);
-                    break;
-                case "frost":
-                    PlaceOutside(track, n % 2 == 0 ? "RacingKit/treeLarge" : "RacingKit/treeSmall", sample + step / 2, railOffset + 10f, n % 2 == 0 ? 12f : 8f, false);
-                    PlaceInside(track, "RacingKit/treeLarge", sample, railOffset + 14f, 11f);
-                    break;
-                default:
-                    PlaceOutside(track, n % 2 == 0 ? "RacingKit/bannerTowerRed" : "RacingKit/billboard", sample + step / 2, railOffset + 12f, 9f, true);
-                    break;
-            }
-        }
-    }
-
-    static void PlaceOutside(BuiltTrack track, string model, int sample, float offset, float size, bool faceRoad)
-    {
-        TrackPath path = track.Path;
-        sample = ((sample % path.Count) + path.Count) % path.Count;
-        Vector3 p = path.Positions[sample];
-        Vector3 r = path.Rights[sample];
-        float side = Vector3.Dot(r, p - track.Centroid) >= 0f ? 1f : -1f;
-        Place(track, model, p + r * side * offset, faceRoad ? -r * side : path.Forwards[sample], size);
-    }
-
-    static void PlaceInside(BuiltTrack track, string model, int sample, float offset, float size)
-    {
-        TrackPath path = track.Path;
-        sample = ((sample % path.Count) + path.Count) % path.Count;
-        Vector3 p = path.Positions[sample];
-        Vector3 r = path.Rights[sample];
-        float side = Vector3.Dot(r, p - track.Centroid) >= 0f ? -1f : 1f;
-        Vector3 at = p + r * side * offset;
-        // Skip infield spots that would land on another part of the circuit.
-        if (Vector3.Distance(at, track.Centroid) < 15f)
-        {
-            return;
-        }
-        Place(track, model, at, path.Forwards[sample], size);
-    }
-
-    static void Place(BuiltTrack track, string model, Vector3 position, Vector3 facing, float size)
-    {
-        GameObject prop = Props.Spawn(model, track.Root.transform, size);
-        prop.transform.position = position;
-        prop.transform.rotation = Quaternion.LookRotation(facing, Vector3.up);
-        Props.Ground(prop);
-        foreach (var c in prop.GetComponentsInChildren<Collider>())
-        {
-            Object.Destroy(c);
-        }
     }
 
     static Texture2D RoadTexture(Color asphalt, Color line)

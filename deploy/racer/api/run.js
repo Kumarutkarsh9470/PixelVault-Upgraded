@@ -1,7 +1,7 @@
 // Accepts a finished race, checks it is plausible, and pays out materials.
 import { sql } from "./_lib/db.js";
 import { findTrack, materialFor, medalFor, rejectReason, rewardFor } from "./_lib/game.js";
-import { readBody, route } from "./_lib/http.js";
+import { cleanGhost, readBody, route } from "./_lib/http.js";
 import { addMaterial, materialsOf, upsertPlayer } from "./_lib/players.js";
 import { verifyInitData } from "./_lib/telegram.js";
 
@@ -24,6 +24,7 @@ export default route(["POST"], async (req) => {
   const valid = reason === null;
   const medal = valid ? medalFor(track, run.totalMs) : null;
   const material = materialFor(track);
+  const ghost = valid ? cleanGhost(body.ghost, run.totalMs) : null;
 
   let reward = rewardFor(medal);
   if (reward > 0) {
@@ -45,10 +46,11 @@ export default route(["POST"], async (req) => {
   let rank = null;
   if (valid) {
     const improved = await sql()`
-      insert into best_times (telegram_id, track_id, total_ms, run_id)
-      values (${user.id}, ${track.id}, ${run.totalMs}, ${runId})
+      insert into best_times (telegram_id, track_id, total_ms, run_id, ghost, splits)
+      values (${user.id}, ${track.id}, ${run.totalMs}, ${runId}, ${ghost ? JSON.stringify(ghost) : null}, ${run.splits})
       on conflict (telegram_id, track_id) do update
-        set total_ms = excluded.total_ms, run_id = excluded.run_id, achieved_at = now()
+        set total_ms = excluded.total_ms, run_id = excluded.run_id, achieved_at = now(),
+            ghost = excluded.ghost, splits = excluded.splits
         where excluded.total_ms < best_times.total_ms
       returning total_ms`;
     personalBest = improved.length > 0;

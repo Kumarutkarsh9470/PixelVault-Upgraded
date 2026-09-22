@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api, formatUsdc, type Stats } from "../lib/api";
 import { haptic } from "../lib/telegram";
@@ -13,9 +13,15 @@ export function Vault({ onBack }: { onBack: () => void }) {
   const { balances, owned, redeem, route, busy, error } = useGame();
   const [routing, setRouting] = useState<Item | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const loaded = useRef(false);
 
+  // Balances change after a redeem or route: fetch past the CDN cache so the totals move with them.
   useEffect(() => {
-    api.stats().then(setStats).catch(() => setStats(null));
+    api
+      .stats(loaded.current)
+      .then(setStats)
+      .catch(() => setStats(null));
+    loaded.current = true;
   }, [balances]);
 
   const holdings = useMemo(() => allItems.filter((i) => owned(i) > 0), [owned]);

@@ -1,3 +1,5 @@
+import { settings } from "./settings";
+
 type WebApp = {
   initData?: string;
   initDataUnsafe?: { user?: { id?: number; username?: string; first_name?: string } };
@@ -42,8 +44,18 @@ export function prepareTelegram() {
   webApp?.setBackgroundColor?.("#070b17");
 }
 
-export function haptic(kind: "tap" | "success" | "error") {
+export type HapticKind = "tap" | "medium" | "heavy" | "success" | "error";
+
+const VIBRATE: Record<HapticKind, number | number[]> = { tap: 8, medium: 18, heavy: 35, success: [12, 40, 12], error: [30, 30, 30] };
+
+export function haptic(kind: HapticKind) {
+  if (!settings.get().haptics) return;
   const h = webApp?.HapticFeedback;
-  if (kind === "tap") h?.impactOccurred?.("light");
-  else h?.notificationOccurred?.(kind);
+  if (h) {
+    if (kind === "tap") h.impactOccurred?.("light");
+    else if (kind === "medium" || kind === "heavy") h.impactOccurred?.(kind);
+    else h.notificationOccurred?.(kind);
+  } else {
+    navigator.vibrate?.(VIBRATE[kind]);
+  }
 }

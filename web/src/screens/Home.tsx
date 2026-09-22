@@ -1,5 +1,6 @@
 import tracksData from "../data/tracks.json";
 import { formatTime, formatUsdc } from "../lib/api";
+import type { Opponent, OpponentKind } from "../lib/opponents";
 import { catalog, useGame } from "../state/game";
 import { MaterialChip, MedalBadge } from "../components/ui";
 
@@ -14,14 +15,24 @@ export function medalFor(track: Track, ms: number | null | undefined) {
   return null;
 }
 
+const OPPONENT_LABELS: Record<Exclude<OpponentKind, "none">, string> = { nova: "Nova", leader: "Leader", best: "Your best" };
+
 export function Home({
   trackId,
   onSelect,
   onRace,
+  opponentKind,
+  opponents,
+  onOpponent,
+  onSettings,
 }: {
   trackId: string;
   onSelect: (id: string) => void;
   onRace: () => void;
+  opponentKind: OpponentKind;
+  opponents: Record<Exclude<OpponentKind, "none">, Opponent | null>;
+  onOpponent: (kind: OpponentKind) => void;
+  onSettings: () => void;
 }) {
   const { session, balances } = useGame();
   const track = tracks.find((t) => t.id === trackId) ?? tracks[0];
@@ -34,7 +45,12 @@ export function Home({
         <div className="logo">
           PIXEL<span>VAULT</span>
         </div>
-        <div className="wallet-pill">{formatUsdc(balances.usdc)}</div>
+        <div className="topbar-right">
+          <div className="wallet-pill">{formatUsdc(balances.usdc)}</div>
+          <button className="icon-button" onClick={onSettings} aria-label="Settings">
+            ⚙
+          </button>
+        </div>
       </header>
 
       <div className="materials-row">
@@ -64,6 +80,28 @@ export function Home({
               <small>+{catalog.medalRewards[m]}</small>
             </div>
           ))}
+        </div>
+
+        <p className="eyebrow">Race against</p>
+        <div className="opponents">
+          {(["nova", "leader", "best"] as const).map((kind) => {
+            const o = opponents[kind];
+            return (
+              <button
+                key={kind}
+                className={opponentKind === kind ? "active" : ""}
+                disabled={!o}
+                onClick={() => onOpponent(kind)}
+              >
+                <span>{kind === "leader" && o ? o.name : OPPONENT_LABELS[kind]}</span>
+                <b>{o ? formatTime(o.totalMs) : "—"}</b>
+              </button>
+            );
+          })}
+          <button className={opponentKind === "none" ? "active" : ""} onClick={() => onOpponent("none")}>
+            <span>Solo</span>
+            <b>no ghost</b>
+          </button>
         </div>
 
         <div className="best-row">

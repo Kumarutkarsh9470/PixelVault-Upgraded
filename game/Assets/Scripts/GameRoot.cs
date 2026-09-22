@@ -9,16 +9,28 @@ public class GameRoot : MonoBehaviour
     static readonly Vector3 GaragePosition = new Vector3(0f, 0f, -4000f);
 
     CameraRig rig;
+    SpeedLines speedLines;
+    QualityGovernor governor;
+    Material sky;
     Light sun;
     RaceManager race;
     GhostPlayer ghost;
     CarController car;
     CarVisuals visuals;
+    Autopilot autopilot;
     Rigidbody carBody;
     BuiltTrack track;
     TrackPayload current;
     LoadoutPayload loadout = new LoadoutPayload();
     GameObject garage;
+    bool attract;
+    float attractStuck;
+
+    /// True while CalibrationRunner drives; the menu attract loop stays off.
+    public bool Calibrating { get; set; }
+    public CarController Car => car;
+    public Autopilot Autopilot => autopilot;
+    public BuiltTrack Track => track;
 
     void Awake()
     {
@@ -26,15 +38,26 @@ public class GameRoot : MonoBehaviour
         Application.targetFrameRate = 60;
 
         Camera cam = Camera.main;
+        cam.farClipPlane = Mathf.Max(cam.farClipPlane, 1400f);
         rig = cam.GetComponent<CameraRig>() ?? cam.gameObject.AddComponent<CameraRig>();
+        var bloom = cam.GetComponent<BloomEffect>() ?? cam.gameObject.AddComponent<BloomEffect>();
+        speedLines = cam.GetComponent<SpeedLines>() ?? cam.gameObject.AddComponent<SpeedLines>();
+        governor = gameObject.AddComponent<QualityGovernor>();
+        governor.Bloom = bloom;
+        sky = Mats.Sky();
         sun = FindFirstObjectByType<Light>();
         race = GetComponent<RaceManager>() ?? gameObject.AddComponent<RaceManager>();
 
         var ghostObject = new GameObject("Ghost");
         ghost = ghostObject.AddComponent<GhostPlayer>();
-        ghostObject.SetActive(false);
 
         CreateCar();
+        rig.Follow(car.transform);
+        speedLines.Car = car;
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-calibrate") >= 0)
+        {
+            gameObject.AddComponent<CalibrationRunner>();
+        }
         if (FindFirstObjectByType<WebBridge>() == null)
         {
             new GameObject("Bridge").AddComponent<WebBridge>();
@@ -67,7 +90,61 @@ public class GameRoot : MonoBehaviour
         };
         car = go.AddComponent<CarController>();
         visuals = go.AddComponent<CarVisuals>();
+        go.AddComponent<CarEffects>();
+        autopilot = go.AddComponent<Autopilot>();
         visuals.Apply(loadout);
+    }
+
+    /// The menu shows the car lapping on its own under the orbit camera, so the
+    /// scene behind the page is alive rather than a parked car.
+    void Update()
+    {
+        if (!attract || track == null)
+        {
+            return;
+        }
+        attractStuck = car.Speed < 2f ? attractStuck + Time.deltaTime : 0f;
+        if (attractStuck > 2.5f)
+        {
+            attractStuck = 0f;
+            int sample = NearestSample(car.transform.position);
+            car.Teleport(track.Path.Positions[sample] + Vector3.up * 0.3f, Quaternion.LookRotation(track.Path.Forwards[sample]));
+            autopilot.Begin(track.Path, sample);
+        }
+    }
+
+    void StartAttract()
+    {
+        if (Calibrating || track == null)
+        {
+            return;
+        }
+        attract = true;
+        attractStuck = 0f;
+        autopilot.Begin(track.Path, (track.Path.Count - 4 + track.Path.Count) % track.Path.Count);
+        car.ControlsEnabled = true;
+    }
+
+    void StopAttract()
+    {
+        attract = false;
+        autopilot.End();
+    }
+
+    int NearestSample(Vector3 position)
+    {
+        int best = 0;
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < track.Path.Count; i++)
+        {
+            float d = (track.Path.Positions[i] - position).sqrMagnitude;
+            if (d < bestDistance)
+            {
+                bestDistance = d;
+                best = i;
+            }
+        }
+        return best;
     }
 
     public void LoadTrack(TrackPayload payload)
@@ -77,6 +154,8 @@ public class GameRoot : MonoBehaviour
             payload.points = DefaultTrack().points;
         }
         ExitGarage();
+        StopAttract();
+        ghost.Stop();
         if (track != null)
         {
             Destroy(track.Root);
@@ -89,12 +168,13 @@ public class GameRoot : MonoBehaviour
         loadout = payload.loadout ?? loadout;
         visuals.Apply(loadout);
         car.GripMultiplier = payload.theme != null && payload.theme.grip > 0f ? payload.theme.grip : 1f;
-        race.Prepare(track, car, visuals, payload.id, payload.laps);
+        race.Prepare(track, car, visuals, ghost, payload.id, payload.laps);
         ghost.Load(payload.ghost, loadout);
+        speedLines.Active = false;
 
-        rig.Target = car.transform;
         rig.Current = CameraRig.Mode.Orbit;
         rig.Snap();
+        StartAttract();
 
         WebBridge.Emit("trackLoaded", new TrackLoadedEvent
         {
@@ -113,8 +193,10 @@ public class GameRoot : MonoBehaviour
             return;
         }
         ExitGarage();
-        race.Prepare(track, car, visuals, current.id, current.laps);
+        StopAttract();
+        race.Prepare(track, car, visuals, ghost, current.id, current.laps);
         ghost.Load(current.ghost, loadout);
+        speedLines.Active = true;
         rig.Current = CameraRig.Mode.Chase;
         rig.Snap();
     }
@@ -132,12 +214,20 @@ public class GameRoot : MonoBehaviour
     public void ShowMenu()
     {
         ExitGarage();
+        ghost.Stop();
+        speedLines.Active = false;
         if (track != null)
         {
-            race.Prepare(track, car, visuals, current.id, current.laps);
+            race.Prepare(track, car, visuals, ghost, current.id, current.laps);
         }
         rig.Current = CameraRig.Mode.Orbit;
         rig.Snap();
+        StartAttract();
+    }
+
+    public void SetBloom(bool enabled)
+    {
+        governor.SetBloom(enabled);
     }
 
     public void ShowGarage(LoadoutPayload payload)
@@ -155,14 +245,15 @@ public class GameRoot : MonoBehaviour
         {
             track.Root.SetActive(false);
         }
-        ghost.gameObject.SetActive(false);
+        StopAttract();
+        ghost.Stop();
+        speedLines.Active = false;
 
         carBody.isKinematic = true;
         car.ControlsEnabled = false;
         car.transform.SetPositionAndRotation(GaragePosition + Vector3.up * 0.3f, Quaternion.Euler(0f, 150f, 0f));
         visuals.Apply(loadout);
 
-        rig.Target = car.transform;
         rig.Current = CameraRig.Mode.Garage;
         rig.Snap();
     }
@@ -190,12 +281,31 @@ public class GameRoot : MonoBehaviour
     void ApplyTheme(ThemePayload theme)
     {
         Camera cam = Camera.main;
-        cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = Palette.Parse(theme.sky, new Color(0.03f, 0.04f, 0.09f));
+        Color top = Palette.Parse(theme.sky, new Color(0.03f, 0.04f, 0.09f));
+        Color horizon = Palette.Parse(theme.fog, top);
+        cam.backgroundColor = horizon;
+
+        // Gradient sky whose horizon matches the fog, so distant scenery melts into it.
+        string scenery = string.IsNullOrEmpty(theme.scenery) ? "city" : theme.scenery;
+        if (sky != null && sky.shader != null && sky.shader.isSupported)
+        {
+            sky.SetColor("_TopColor", top);
+            sky.SetColor("_HorizonColor", horizon);
+            sky.SetColor("_BottomColor", horizon * 0.6f);
+            sky.SetFloat("_Stars", scenery == "desert" ? 0f : scenery == "frost" ? 0.35f : 0.7f);
+            sky.SetColor("_SunColor", Palette.Parse(theme.sun, Color.white));
+            sky.SetFloat("_SunSize", scenery == "desert" ? 0.06f : scenery == "frost" ? 0.03f : 0f);
+            RenderSettings.skybox = sky;
+            cam.clearFlags = CameraClearFlags.Skybox;
+        }
+        else
+        {
+            cam.clearFlags = CameraClearFlags.SolidColor;
+        }
 
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogColor = Palette.Parse(theme.fog, cam.backgroundColor);
+        RenderSettings.fogColor = horizon;
         RenderSettings.fogDensity = theme.fogDensity > 0f ? theme.fogDensity : 0.004f;
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
         RenderSettings.ambientLight = Palette.Parse(theme.ambient, new Color(0.2f, 0.25f, 0.4f));

@@ -48,6 +48,42 @@ public static class GameBuilder
         }
     }
 
+    /// Windows player used only for headless medal calibration (CalibrationRunner).
+    [MenuItem("PixelVault/Build Calibration")]
+    public static void BuildCalibration()
+    {
+        try
+        {
+            CreateMaterials();
+            CreateScene();
+            ConfigurePlayer();
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
+            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+            PlayerSettings.runInBackground = true;
+
+            BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = new[] { ScenePath },
+                locationPathName = "Builds/Calibration/PixelVaultRacer.exe",
+                target = BuildTarget.StandaloneWindows64,
+                options = BuildOptions.None,
+            });
+            Debug.Log($"[GameBuilder] calibration result={report.summary.result}");
+            if (Application.isBatchMode)
+            {
+                EditorApplication.Exit(report.summary.result == BuildResult.Succeeded ? 0 : 1);
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("[GameBuilder] " + e);
+            if (Application.isBatchMode)
+            {
+                EditorApplication.Exit(1);
+            }
+        }
+    }
+
     /// Materials saved as assets so the shader variants they use (emission,
     /// transparency) survive build-time stripping. Runtime code clones them.
     static void CreateMaterials()
@@ -80,6 +116,18 @@ public static class GameBuilder
         ghost.SetColor("_EmissionColor", new Color(0.2f, 0.6f, 0.9f));
         ghost.renderQueue = (int)RenderQueue.Transparent;
 
+        Material windows = GetOrCreate("Windows", "Standard");
+        windows.color = new Color(0.06f, 0.07f, 0.1f);
+        windows.EnableKeyword("_EMISSION");
+        windows.SetColor("_EmissionColor", Color.white);
+        windows.SetTexture("_EmissionMap", Texture2D.whiteTexture);
+        windows.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+
+        GetOrCreate("ParticleAdditive", "Legacy Shaders/Particles/Additive");
+        GetOrCreate("ParticleAlpha", "Legacy Shaders/Particles/Alpha Blended");
+        GetOrCreate("Sky", "PixelVault/GradientSky");
+        GetOrCreate("Bloom", "Hidden/PixelVault/Bloom");
+
         AssetDatabase.SaveAssets();
     }
 
@@ -107,7 +155,7 @@ public static class GameBuilder
 
         Camera cam = Camera.main;
         cam.gameObject.AddComponent<CameraRig>();
-        cam.farClipPlane = 900f;
+        cam.farClipPlane = 1400f;
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = new Color(0.03f, 0.04f, 0.09f);
 

@@ -457,64 +457,294 @@ button.ghost {
 
 /* ---------- Race ---------- */
 
+.race {
+  font-variant-numeric: tabular-nums;
+}
+
 .hud {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  align-items: start;
+  gap: 8px;
+  padding-top: env(safe-area-inset-top, 0px);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
 }
 
 .hud-lap {
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.hud-lap small {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
 }
 
 .hud-lap b {
-  font-size: 1.3rem;
+  font-size: 2rem;
+  font-weight: 900;
+  font-style: italic;
+}
+
+.hud-lap b span {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.hud-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .hud-time {
   font-size: 1.9rem;
-  font-weight: 800;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.02em;
 }
 
-.hud-speed {
-  justify-self: end;
-  font-size: 0.8rem;
+.hud-delta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(10, 15, 30, 0.65);
+  border: 1px solid var(--line);
+  font-size: 0.75rem;
   color: var(--muted);
+  transition: border-color 0.2s, color 0.2s;
 }
 
-.hud-speed b {
-  font-size: 1.4rem;
+.hud-delta b {
+  font-size: 0.95rem;
   color: var(--text);
 }
 
-.countdown {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 7rem;
-  font-weight: 900;
-  text-shadow: 0 0 40px rgba(34, 211, 238, 0.8);
-  pointer-events: none;
-  animation: pop 0.8s ease-out infinite;
+.hud-delta.ahead {
+  border-color: rgba(52, 211, 153, 0.6);
 }
 
-.countdown.go {
+.hud-delta.ahead b {
   color: var(--good);
-  text-shadow: 0 0 40px rgba(52, 211, 153, 0.8);
+}
+
+.hud-delta.behind {
+  border-color: rgba(248, 113, 113, 0.6);
+}
+
+.hud-delta.behind b {
+  color: var(--bad);
+}
+
+.minimap {
+  justify-self: end;
+  margin-top: 44px;
+  background: rgba(7, 11, 23, 0.55);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  backdrop-filter: blur(6px);
+}
+
+.mm-road {
+  fill: none;
+  stroke: rgba(230, 237, 246, 0.25);
+  stroke-width: 6;
+  stroke-linejoin: round;
+}
+
+.mm-line {
+  fill: none;
+  stroke: rgba(230, 237, 246, 0.8);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.mm-start {
+  fill: #fff;
+}
+
+.mm-car {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 1.2;
+  filter: drop-shadow(0 0 3px var(--accent));
+}
+
+.mm-ghost {
+  fill: rgba(244, 114, 182, 0.85);
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 0.8;
+}
+
+.speedo {
+  position: fixed;
+  left: 50%;
+  bottom: calc(10px + var(--safe-bottom));
+  width: 130px;
+  height: 130px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.speedo svg {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
+}
+
+.sp-track {
+  fill: none;
+  stroke: rgba(230, 237, 246, 0.14);
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.sp-track.thin {
+  stroke-width: 4;
+}
+
+.sp-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 9;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.08s linear, stroke 0.2s;
+}
+
+.sp-charge {
+  fill: none;
+  stroke: var(--accent-2);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.1s linear;
+}
+
+.speedo.boost .sp-fill {
+  stroke: #fbbf24;
+  filter: drop-shadow(0 0 6px #fbbf24);
+}
+
+.speedo.drift .sp-charge {
+  filter: drop-shadow(0 0 5px var(--accent-2));
+}
+
+.sp-readout {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.sp-readout b {
+  font-size: 2.1rem;
+  font-weight: 900;
+  font-style: italic;
+}
+
+.sp-readout span {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+.sp-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: var(--accent-2);
+}
+
+.speedo.boost .sp-label {
+  color: #fbbf24;
+}
+
+.boost-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px rgba(251, 191, 36, 0.35);
+  animation: pulse 0.35s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.start-lights {
+  position: fixed;
+  top: 30%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  pointer-events: none;
+}
+
+.lights {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(5, 8, 16, 0.85);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.lights span {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #2a0d12;
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.6);
+  transition: background 0.08s;
+}
+
+.lights span.on {
+  background: #ff2d44;
+  box-shadow: 0 0 18px #ff2d44, inset 0 -3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.lights span.on-green {
+  background: #22ff88;
+  box-shadow: 0 0 18px #22ff88;
+}
+
+.go-text {
+  font-size: 5rem;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--good);
+  text-shadow: 0 0 40px rgba(52, 211, 153, 0.9);
+  animation: pop 0.6s ease-out;
 }
 
 @keyframes pop {
   from {
-    transform: scale(1.35);
-    opacity: 0.6;
+    transform: scale(1.6);
+    opacity: 0;
   }
-  30% {
+  40% {
     transform: scale(1);
     opacity: 1;
   }
@@ -522,34 +752,107 @@ button.ghost {
 
 .flash {
   position: fixed;
-  top: 28%;
+  top: 26%;
   left: 0;
   right: 0;
   text-align: center;
-  font-size: 1.4rem;
-  font-weight: 800;
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-style: italic;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  text-shadow: 0 0 20px rgba(244, 114, 182, 0.8);
+  text-shadow: 0 0 20px rgba(244, 114, 182, 0.9);
   pointer-events: none;
+  animation: pop 0.5s ease-out;
 }
 
 .touch-hint {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(28px + var(--safe-bottom));
+  bottom: calc(150px + var(--safe-bottom));
   display: flex;
   justify-content: space-between;
+  gap: 10px;
   padding: 0 18px;
-  color: var(--muted);
+  color: var(--text);
   font-size: 0.8rem;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
   pointer-events: none;
+}
+
+.finish {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: radial-gradient(circle at center, rgba(7, 11, 23, 0.35), rgba(7, 11, 23, 0.8));
+  pointer-events: none;
+  animation: fade-in 0.3s ease-out;
+}
+
+.finish h1 {
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  background: linear-gradient(90deg, var(--accent), #fff, var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: pop 0.6s ease-out;
+}
+
+.finish-flag {
+  width: 160px;
+  height: 22px;
+  background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 22px 22px;
+  border-radius: 4px;
+  animation: wave 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes wave {
+  from {
+    transform: skewX(-8deg);
+  }
+  to {
+    transform: skewX(8deg);
+  }
+}
+
+.finish-time {
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+
+.finish-delta {
+  font-weight: 700;
+}
+
+.finish-delta.ahead,
+.result-deltas .ahead {
+  color: var(--good);
+}
+
+.finish-delta.behind,
+.result-deltas .behind {
+  color: var(--bad);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .quit {
   position: fixed;
-  top: calc(56px + env(safe-area-inset-top, 0px));
+  top: calc(12px + env(safe-area-inset-top, 0px));
   right: 14px;
   width: 36px;
   height: 36px;
@@ -557,6 +860,159 @@ button.ghost {
   border: 1px solid var(--line);
   background: rgba(10, 15, 30, 0.6);
   cursor: pointer;
+}
+
+.result-deltas {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.text-gold {
+  color: var(--gold);
+}
+
+.text-silver {
+  color: var(--silver);
+}
+
+.text-bronze {
+  color: var(--bronze);
+}
+
+/* ---------- Opponents and settings ---------- */
+
+.topbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.opponents {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.opponents button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 4px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 0.72rem;
+  overflow: hidden;
+}
+
+.opponents button span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opponents button b {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.opponents button.active {
+  border-color: var(--accent);
+  background: rgba(34, 211, 238, 0.12);
+}
+
+.opponents button.active b {
+  color: var(--accent);
+}
+
+.opponents button:disabled {
+  opacity: 0.4;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.segmented button {
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.segmented button.active {
+  border-color: var(--accent);
+  background: rgba(34, 211, 238, 0.14);
+  color: var(--accent);
+}
+
+.toggle-row {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  font-size: 0.95rem;
+  text-align: left;
+}
+
+.toggle-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.toggle-row i {
+  flex: none;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 0.2s;
+}
+
+.toggle-row i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.toggle-row.on i {
+  background: var(--accent);
+}
+
+.toggle-row.on i::after {
+  transform: translateX(18px);
+}
+
+/* The garage sheet leaves the top of the screen to the car on its turntable. */
+.garage .sheet {
+  max-height: 55vh;
 }
 
 /* ---------- Results ---------- */

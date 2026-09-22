@@ -55,7 +55,7 @@ export default route(["GET"], async (_req, res) => {
     };
   });
 
-  res.setHeader("Cache-Control", "public, s-maxage=15, stale-while-revalidate=30");
+  res.setHeader("Cache-Control", "public, s-maxage=5, stale-while-revalidate=10");
   return {
     totalBacked: protocolAccount ? u64(protocolAccount.data, PROTOCOL_TOTAL_BACKED) : 0,
     games,

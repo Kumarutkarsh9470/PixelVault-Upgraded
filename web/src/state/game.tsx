@@ -202,8 +202,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
         laps: result.laps,
         respawns: result.respawns,
         splits: result.splits,
+        ghost: result.ghost,
       });
-      setSession((s) => (s ? { ...s, materials: response.materials } : s));
+      setSession((s) =>
+        s
+          ? {
+              ...s,
+              materials: response.materials,
+              bests: response.best != null ? { ...s.bests, [result.trackId]: response.best } : s.bests,
+            }
+          : s,
+      );
       return response;
     },
     [],

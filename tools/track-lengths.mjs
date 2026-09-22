@@ -44,11 +44,11 @@ function length(flat) {
   return total;
 }
 
-// Top speed is 46 m/s; these average speeds set how hard each medal is.
+// Rough medal paces for new tracks; tools/apply-calibration.mjs sets the real ones from autopilot runs.
 const GOLD_MPS = 35;
 const SILVER_MPS = 31;
 const BRONZE_MPS = 26;
-const TOP_SPEED_MPS = 46;
+const TOP_SPEED_MPS = 62;
 
 for (const track of tracks) {
   const lap = length(track.points);

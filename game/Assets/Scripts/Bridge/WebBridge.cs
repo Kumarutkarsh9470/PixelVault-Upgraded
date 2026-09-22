@@ -60,4 +60,25 @@ public class WebBridge : MonoBehaviour
     {
         GameRoot.Instance.ShowMenu();
     }
+
+    /// Device tilt from the page's DeviceOrientation handler, -1 (left) to 1 (right).
+    public void SetTilt(string value)
+    {
+        if (float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float tilt))
+        {
+            CarController.TiltSteer = Mathf.Clamp(tilt, -1f, 1f);
+        }
+    }
+
+    /// "tilt" steers with the phone and brakes/drifts on touch; anything else is two-thumb touch.
+    public void SetInputMode(string mode)
+    {
+        CarController.TiltEnabled = mode == "tilt";
+        CarController.TiltSteer = 0f;
+    }
+
+    public void SetBloom(string value)
+    {
+        GameRoot.Instance.SetBloom(value == "1" || value == "true");
+    }
 }

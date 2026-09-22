@@ -52,11 +52,11 @@
       },
       "lapMeters": 657,
       "medals": {
-        "gold": 37557,
-        "silver": 42403,
-        "bronze": 50557
+        "gold": 29140,
+        "silver": 31940,
+        "bronze": 36420
       },
-      "minPlausibleMs": 26290
+      "minPlausibleMs": 19498
     },
     {
       "id": "dune-rush",
@@ -110,11 +110,11 @@
       },
       "lapMeters": 723,
       "medals": {
-        "gold": 41289,
-        "silver": 46617,
-        "bronze": 55582
+        "gold": 36100,
+        "silver": 39580,
+        "bronze": 45130
       },
-      "minPlausibleMs": 28903
+      "minPlausibleMs": 21457
     },
     {
       "id": "frostline",
@@ -164,11 +164,11 @@
       },
       "lapMeters": 680,
       "medals": {
-        "gold": 41975,
-        "silver": 47391,
-        "bronze": 56504
+        "gold": 35580,
+        "silver": 39010,
+        "bronze": 44480
       },
-      "minPlausibleMs": 27206
+      "minPlausibleMs": 20181
     }
   ]
 }

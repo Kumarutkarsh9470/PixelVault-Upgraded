@@ -1,28 +1,33 @@
 using UnityEngine;
 
 /// Replays a recorded run as a translucent car, interpolating between samples.
+/// Hidden until the race starts, so it never overlaps the player's car on the menu.
 public class GhostPlayer : MonoBehaviour
 {
     GhostPayload ghost;
     float time;
     bool playing;
+    GameObject model;
+
+    public bool HasGhost => ghost != null && ghost.samples != null && ghost.samples.Length >= 8;
+    public bool Visible => playing && model != null && model.activeSelf;
 
     public void Load(GhostPayload payload, LoadoutPayload loadout)
     {
         ghost = payload;
         playing = false;
         time = 0f;
-        gameObject.SetActive(payload != null && payload.samples != null && payload.samples.Length >= 8);
-        if (!gameObject.activeSelf)
+        if (model != null)
+        {
+            Destroy(model);
+            model = null;
+        }
+        if (!HasGhost)
         {
             return;
         }
 
-        foreach (Transform child in transform)
-        {
-            Destroy(child.gameObject);
-        }
-        GameObject model = Props.Spawn("CarKit/" + (string.IsNullOrEmpty(loadout?.chassis) ? "race" : loadout.chassis), transform, CarVisuals.CarLength, Props.Axis.Z);
+        model = Props.Spawn("CarKit/" + (string.IsNullOrEmpty(loadout?.chassis) ? "race" : loadout.chassis), transform, CarVisuals.CarLength, Props.Axis.Z);
         foreach (var c in model.GetComponentsInChildren<Collider>())
         {
             Destroy(c);
@@ -38,13 +43,25 @@ public class GhostPlayer : MonoBehaviour
             r.sharedMaterials = shared;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
+        model.SetActive(false);
         Pose(0f);
     }
 
     public void Play()
     {
-        playing = gameObject.activeSelf;
+        if (!HasGhost)
+        {
+            return;
+        }
+        playing = true;
         time = 0f;
+        model.SetActive(true);
+    }
+
+    public void Stop()
+    {
+        playing = false;
+        if (model != null) model.SetActive(false);
     }
 
     void Update()
@@ -71,7 +88,8 @@ public class GhostPlayer : MonoBehaviour
         transform.SetPositionAndRotation(Vector3.Lerp(a, b, blend), Quaternion.Euler(0f, yaw, 0f));
         if (i >= count - 1)
         {
-            playing = false;
+            // Finished its run: fade out rather than sit on the finish line.
+            Stop();
         }
     }
 }

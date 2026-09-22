@@ -67,6 +67,35 @@ public class HudEvent
     public int lap;
     public int laps;
     public int speedKmh;
+    /// Car and ghost positions on the ground plane, for the minimap.
+    public float x;
+    public float z;
+    public float gx;
+    public float gz;
+    public bool ghost;
+    public bool drift;
+    /// Drift boost charge, 0-100.
+    public int charge;
+    public bool boost;
+}
+
+[Serializable]
+public class ImpactEvent
+{
+    public float strength;
+}
+
+[Serializable]
+public class QualityEvent
+{
+    public bool bloom;
+    public int fps;
+}
+
+[Serializable]
+public class TrackList
+{
+    public TrackPayload[] tracks;
 }
 
 [Serializable]

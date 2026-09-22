@@ -43,6 +43,10 @@ create table if not exists best_times (
 );
 create index if not exists best_times_leaderboard on best_times (track_id, total_ms);
 
+-- v2: the recorded line of each personal best, so others can race against it.
+alter table best_times add column if not exists ghost jsonb;
+alter table best_times add column if not exists splits int[];
+
 -- Material grants the game server has signed. Materials are reserved when a
 -- grant is issued and settled against the chain: the player's on-chain grant
 -- sequence tells us whether the craft happened.

@@ -40,6 +40,18 @@ public static class Mats
         return mat;
     }
 
+    /// Dark facade with a lit-window texture as its emission.
+    public static Material Windows(Color body, Texture windows, Vector2 tiling, float intensity = 1.3f)
+    {
+        var mat = new Material(Load("Windows"));
+        mat.color = body;
+        mat.SetTexture("_EmissionMap", windows);
+        mat.SetColor("_EmissionColor", Color.white * intensity);
+        mat.mainTextureScale = tiling;
+        mat.SetTextureScale("_EmissionMap", tiling);
+        return mat;
+    }
+
     public static Material Trail(Color color)
     {
         var mat = new Material(Load("Trail"));
@@ -47,8 +59,45 @@ public static class Mats
         return mat;
     }
 
+    public static Material ParticleAdditive(Texture texture)
+    {
+        var mat = new Material(Load("ParticleAdditive"));
+        if (texture != null) mat.mainTexture = texture;
+        return mat;
+    }
+
+    public static Material ParticleAlpha(Texture texture)
+    {
+        var mat = new Material(Load("ParticleAlpha"));
+        if (texture != null) mat.mainTexture = texture;
+        return mat;
+    }
+
+    /// Legacy particle shaders tint with _TintColor (0.5 is neutral) rather than _Color.
+    public static void Tint(Material mat, Color color)
+    {
+        if (mat.HasProperty("_TintColor"))
+        {
+            mat.SetColor("_TintColor", new Color(color.r * 0.5f, color.g * 0.5f, color.b * 0.5f, color.a * 0.5f));
+        }
+        else
+        {
+            mat.color = color;
+        }
+    }
+
     public static Material Ghost()
     {
         return new Material(Load("Ghost"));
+    }
+
+    public static Material Sky()
+    {
+        return new Material(Load("Sky"));
+    }
+
+    public static Material Bloom()
+    {
+        return new Material(Load("Bloom"));
     }
 }

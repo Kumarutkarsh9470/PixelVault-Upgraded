@@ -11,7 +11,8 @@ export const { tracks } = load("tracks.json");
 export const catalog = load("catalog.json");
 
 const CHECKPOINT_SPACING_M = 55;
-const TOP_SPEED_MPS = 46;
+// Boosted top speed (CarController.BoostMaxSpeed).
+const TOP_SPEED_MPS = 62;
 
 export function findTrack(id) {
   const track = tracks.find((t) => t.id === id);

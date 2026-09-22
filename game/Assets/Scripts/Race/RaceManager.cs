@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,14 +10,19 @@ public class RaceManager : MonoBehaviour
 {
     public static RaceManager Instance { get; private set; }
 
+    /// Raised in-process when a race finishes (used by calibration runs).
+    public static event Action<RaceFinishedEvent> Finished;
+
     const float GhostInterval = 0.1f;
-    const float HudInterval = 0.1f;
+    const float HudInterval = 0.05f;
 
     public bool Racing { get; private set; }
     public int Lap { get; private set; }
 
     CarController car;
     CarVisuals visuals;
+    CarEffects effects;
+    GhostPlayer ghost;
     BuiltTrack track;
     string trackId;
     int laps;
@@ -37,11 +43,25 @@ public class RaceManager : MonoBehaviour
         Instance = this;
     }
 
-    public void Prepare(BuiltTrack builtTrack, CarController raceCar, CarVisuals raceVisuals, string id, int lapCount)
+    public void Prepare(BuiltTrack builtTrack, CarController raceCar, CarVisuals raceVisuals, GhostPlayer ghostPlayer, string id, int lapCount)
     {
+        if (car != raceCar)
+        {
+            if (car != null)
+            {
+                car.Impact -= OnImpact;
+                car.Boosted -= OnBoost;
+                car.DriftStarted -= OnDriftStarted;
+            }
+            raceCar.Impact += OnImpact;
+            raceCar.Boosted += OnBoost;
+            raceCar.DriftStarted += OnDriftStarted;
+        }
         track = builtTrack;
         car = raceCar;
         visuals = raceVisuals;
+        effects = raceCar.GetComponent<CarEffects>();
+        ghost = ghostPlayer;
         trackId = id;
         laps = Mathf.Max(1, lapCount);
         Racing = false;
@@ -56,6 +76,7 @@ public class RaceManager : MonoBehaviour
         car.ControlsEnabled = false;
         car.Teleport(track.SpawnPosition, track.SpawnRotation);
         visuals.ClearTrails();
+        if (effects != null) effects.ClearTrails();
     }
 
     public void Begin()
@@ -67,6 +88,21 @@ public class RaceManager : MonoBehaviour
         Racing = true;
         car.ControlsEnabled = true;
         WebBridge.Emit("raceStarted");
+    }
+
+    void OnImpact(float strength)
+    {
+        if (Racing) WebBridge.Emit("impact", new ImpactEvent { strength = strength });
+    }
+
+    void OnBoost()
+    {
+        if (Racing) WebBridge.Emit("boost");
+    }
+
+    void OnDriftStarted()
+    {
+        if (Racing) WebBridge.Emit("drift");
     }
 
     public void OnCheckpoint(int index)
@@ -113,22 +149,33 @@ public class RaceManager : MonoBehaviour
         {
             ghostTimer -= GhostInterval;
             Transform t = car.transform;
-            ghostSamples.Add(t.position.x);
-            ghostSamples.Add(t.position.y);
-            ghostSamples.Add(t.position.z);
-            ghostSamples.Add(t.eulerAngles.y);
+            ghostSamples.Add(Mathf.Round(t.position.x * 100f) / 100f);
+            ghostSamples.Add(Mathf.Round(t.position.y * 100f) / 100f);
+            ghostSamples.Add(Mathf.Round(t.position.z * 100f) / 100f);
+            ghostSamples.Add(Mathf.Round(t.eulerAngles.y * 10f) / 10f);
         }
 
         hudTimer += Time.deltaTime;
         if (hudTimer >= HudInterval)
         {
             hudTimer = 0f;
+            Vector3 p = car.transform.position;
+            bool ghostVisible = ghost != null && ghost.Visible;
+            Vector3 g = ghostVisible ? ghost.transform.position : Vector3.zero;
             WebBridge.Emit("hud", new HudEvent
             {
                 timeMs = Mathf.RoundToInt(raceTime * 1000f),
                 lap = Mathf.Clamp(Lap, 1, laps),
                 laps = laps,
                 speedKmh = Mathf.RoundToInt(car.SpeedKmh),
+                x = p.x,
+                z = p.z,
+                gx = g.x,
+                gz = g.z,
+                ghost = ghostVisible,
+                drift = car.Drifting,
+                charge = Mathf.RoundToInt(car.DriftCharge * 100f),
+                boost = car.Boosting,
             });
         }
 
@@ -181,6 +228,7 @@ public class RaceManager : MonoBehaviour
         stuckTimer = 0f;
         respawns++;
         visuals.ClearTrails();
+        if (effects != null) effects.ClearTrails();
         WebBridge.Emit("respawn");
     }
 
@@ -188,7 +236,7 @@ public class RaceManager : MonoBehaviour
     {
         Racing = false;
         car.ControlsEnabled = false;
-        WebBridge.Emit("raceFinished", new RaceFinishedEvent
+        var result = new RaceFinishedEvent
         {
             trackId = trackId,
             totalMs = timeMs,
@@ -196,6 +244,8 @@ public class RaceManager : MonoBehaviour
             respawns = respawns,
             splits = splits.ToArray(),
             ghost = new GhostPayload { interval = GhostInterval, samples = ghostSamples.ToArray() },
-        });
+        };
+        WebBridge.Emit("raceFinished", result);
+        Finished?.Invoke(result);
     }
 }
