@@ -4,6 +4,7 @@ pub mod events;
 pub mod grant;
 pub mod instructions;
 pub mod math;
+pub mod sim;
 pub mod state;
 
 use anchor_lang::prelude::*;
@@ -103,5 +104,37 @@ pub mod pixelvault {
     /// Raise an item class's backing, depositing the difference for every unit in circulation.
     pub fn raise_backing(ctx: Context<RaiseBacking>, new_bps: u16) -> Result<()> {
         instructions::raise_backing::handle_raise_backing(ctx, new_bps)
+    }
+
+    /// Register a circuit and its leaderboard. The centreline follows in
+    /// chunks, because it is far larger than one transaction.
+    pub fn init_track(ctx: Context<InitTrack>, track_id: u64, args: TrackArgs) -> Result<()> {
+        instructions::track::handle_init_track(ctx, track_id, args)
+    }
+
+    /// Write a run of centreline samples into a circuit being registered.
+    pub fn write_track_samples(ctx: Context<EditTrack>, offset: u16, data: Vec<u8>) -> Result<()> {
+        instructions::track::handle_write_track_samples(ctx, offset, data)
+    }
+
+    /// Lock a circuit's geometry, so every time on it was set on the same track.
+    pub fn freeze_track(ctx: Context<EditTrack>) -> Result<()> {
+        instructions::track::handle_freeze_track(ctx)
+    }
+
+    /// Start verifying a run: reserve the buffer the trace and the car live in.
+    pub fn open_run(ctx: Context<OpenRun>, track_id: u64, trace_len: u16) -> Result<()> {
+        instructions::verify_run::handle_open_run(ctx, track_id, trace_len)
+    }
+
+    /// Upload part of a run's input trace.
+    pub fn write_run(ctx: Context<WriteRun>, offset: u16, data: Vec<u8>) -> Result<()> {
+        instructions::verify_run::handle_write_run(ctx, offset, data)
+    }
+
+    /// Replay the next stretch of a run. The transaction that reaches the end
+    /// of the trace records the time the program derived.
+    pub fn verify_run(ctx: Context<VerifyRun>, steps: u32) -> Result<()> {
+        instructions::verify_run::handle_verify_run(ctx, steps)
     }
 }

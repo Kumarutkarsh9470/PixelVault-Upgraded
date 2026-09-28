@@ -2170,6 +2170,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "bytemuck",
  "litesvm",
  "solana-instructions-sysvar 3.0.1",
  "solana-keypair",

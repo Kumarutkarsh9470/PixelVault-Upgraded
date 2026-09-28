@@ -26,6 +26,10 @@ pub const BPS_DENOMINATOR: u128 = 10_000;
 
 pub const MAX_GAME_NAME_LEN: usize = 64;
 
+pub const TRACK_SEED: &[u8] = b"track";
+pub const LEADERBOARD_SEED: &[u8] = b"board";
+pub const RUN_SEED: &[u8] = b"run";
+
 /// Domain separator for material grants, so a signature over grant bytes can
 /// never be mistaken for a signature over anything else.
 pub const GRANT_DOMAIN: &[u8] = b"PIXELVAULT_GRANT_V2";

@@ -41,6 +41,18 @@ pub struct ItemRedeemed {
     pub game_total_backed: u64,
 }
 
+/// A run the program re-simulated and agreed with.
+#[event]
+pub struct RunVerified {
+    pub track_id: u64,
+    pub player: Pubkey,
+    pub total_ms: u32,
+    pub steps: u32,
+    pub trace_hash: [u8; 32],
+    /// Position on the leaderboard, one-based; zero when the run did not place.
+    pub rank: u16,
+}
+
 #[event]
 pub struct BackingRaised {
     pub game: Pubkey,
