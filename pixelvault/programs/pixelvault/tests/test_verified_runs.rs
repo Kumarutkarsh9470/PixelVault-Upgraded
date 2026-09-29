@@ -267,6 +267,22 @@ fn verify(world: &mut World, player: &Keypair, trace: &[u8]) -> Result<Vec<u64>,
     Err("verification did not finish in sixteen transactions".to_string())
 }
 
+/// Hands the run buffer's rent back, as the client does once a run is verified.
+fn close(world: &mut World, player: &Keypair) -> Result<u64, String> {
+    let run = pda(&[b"run", player.pubkey().as_ref(), &TRACK_ID.to_le_bytes()]);
+    let close = Instruction {
+        program_id: pixelvault::id(),
+        accounts: pixelvault::accounts::CloseRun {
+            player: player.pubkey(),
+            run,
+            rent_refund: world.payer.pubkey(),
+        }
+        .to_account_metas(None),
+        data: pixelvault::instruction::CloseRun {}.data(),
+    };
+    send_signed(world, &[close], &[player])
+}
+
 fn send_signed(world: &mut World, ixs: &[Instruction], extra: &[&Keypair]) -> Result<u64, String> {
     world.svm.expire_blockhash();
     let blockhash = world.svm.latest_blockhash();
@@ -420,4 +436,52 @@ fn a_trace_that_was_not_fully_uploaded_cannot_be_verified() {
     };
     let error = send_signed(&mut world, &[verify_ix], &[&player]).expect_err("should have failed");
     assert!(error.contains("6026"), "expected TraceIncomplete, got {error}");
+}
+
+#[test]
+fn closing_a_verified_run_returns_its_rent_to_whoever_paid() {
+    let mut world = setup();
+    let player = Keypair::new();
+    world.svm.airdrop(&player.pubkey(), 1_000_000_000).unwrap();
+    let run = pda(&[b"run", player.pubkey().as_ref(), &TRACK_ID.to_le_bytes()]);
+
+    let (trace, _) = bot_run(&world, 30.0);
+    let before = world.svm.get_account(&world.payer.pubkey()).unwrap().lamports;
+    verify(&mut world, &player, &trace).expect("verification failed");
+
+    let rent = world.svm.get_account(&run).unwrap().lamports;
+    assert!(rent > 0, "the buffer should hold rent while it is in use");
+    close(&mut world, &player).expect("close_run failed");
+    assert!(world.svm.get_account(&run).is_none_or(|a| a.lamports == 0), "the buffer should be gone");
+
+    // The sponsor is out only the fees it paid, not the rent it fronted.
+    let after = world.svm.get_account(&world.payer.pubkey()).unwrap().lamports;
+    let spent = before.saturating_sub(after);
+    assert!(spent < rent, "sponsoring a run cost {spent} lamports, more than the {rent} of rent it got back");
+}
+
+#[test]
+fn a_run_buffer_can_only_be_closed_to_the_account_that_paid_for_it() {
+    let mut world = setup();
+    let player = Keypair::new();
+    let thief = Keypair::new();
+    for key in [&player, &thief] {
+        world.svm.airdrop(&key.pubkey(), 1_000_000_000).unwrap();
+    }
+    let run = pda(&[b"run", player.pubkey().as_ref(), &TRACK_ID.to_le_bytes()]);
+    let (trace, _) = bot_run(&world, 30.0);
+    verify(&mut world, &player, &trace).expect("verification failed");
+
+    let steal = Instruction {
+        program_id: pixelvault::id(),
+        accounts: pixelvault::accounts::CloseRun {
+            player: player.pubkey(),
+            run,
+            rent_refund: thief.pubkey(),
+        }
+        .to_account_metas(None),
+        data: pixelvault::instruction::CloseRun {}.data(),
+    };
+    let error = send_signed(&mut world, &[steal], &[&player]).expect_err("should have failed");
+    assert!(error.contains("6006"), "expected Unauthorized, got {error}");
 }

@@ -54,6 +54,12 @@ alter table best_times add column if not exists steps int;
 alter table runs add column if not exists trace text;
 alter table runs add column if not exists steps int;
 
+-- v4: the transaction in which the chain replayed this run. Unique, so a
+-- verified run can only ever be rewarded once.
+alter table runs add column if not exists signature text;
+create unique index if not exists runs_by_signature on runs (signature) where signature is not null;
+
+
 -- Material grants the game server has signed. Materials are reserved when a
 -- grant is issued and settled against the chain: the player's on-chain grant
 -- sequence tells us whether the craft happened.

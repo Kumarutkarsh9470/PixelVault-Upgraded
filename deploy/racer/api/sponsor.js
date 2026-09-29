@@ -9,16 +9,38 @@ const RPC_URL = process.env.RPC_URL || "https://api.devnet.solana.com";
 const PIXELVAULT_PROGRAM = "AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ";
 const MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 const ED25519_PROGRAM = "Ed25519SigVerify111111111111111111111111111";
+const COMPUTE_BUDGET_PROGRAM = "ComputeBudget111111111111111111111111111111";
 
-// Only these programs may appear in a sponsored transaction. The Compute
-// Budget program is deliberately absent: it would let a client attach an
-// arbitrary priority fee that the sponsor pays.
-const SPONSORED_PROGRAMS = new Set([PIXELVAULT_PROGRAM, MEMO_PROGRAM, ED25519_PROGRAM]);
+// Only these programs may appear in a sponsored transaction.
+const SPONSORED_PROGRAMS = new Set([
+  PIXELVAULT_PROGRAM,
+  MEMO_PROGRAM,
+  ED25519_PROGRAM,
+  COMPUTE_BUDGET_PROGRAM,
+]);
 
-// In `craft`, account 1 is `rent_payer`: the only role the sponsor may play in
-// any instruction. The program itself limits what rent it pays for.
-const CRAFT_DISCRIMINATOR = createHash("sha256").update("global:craft").digest().subarray(0, 8);
-const RENT_PAYER_POSITION = 1;
+// Replaying a race needs a raised compute limit, so the Compute Budget program
+// is allowed, but only to raise the limit. Setting a priority fee (tag 3) is
+// refused: the sponsor pays the fees, and a client could otherwise make one
+// transaction cost whatever it liked.
+const SET_COMPUTE_UNIT_LIMIT = 2;
+const MAX_COMPUTE_UNITS = 1_400_000;
+
+const discriminator = (name) =>
+  createHash("sha256").update(`global:${name}`).digest().subarray(0, 8);
+
+/**
+ * Where the sponsor's own key may appear, by instruction. The program decides
+ * what it does with that role; this only limits which roles are on offer.
+ *   craft      account 1: rent_payer for a newly minted item
+ *   open_run   account 0: payer for the buffer a run is verified in
+ *   close_run  account 2: where that buffer's rent goes back to
+ */
+const SPONSOR_ROLES = [
+  { name: "craft", position: 1 },
+  { name: "open_run", position: 0 },
+  { name: "close_run", position: 2 },
+].map((role) => ({ ...role, discriminator: discriminator(role.name) }));
 
 let cachedFeePayer;
 
@@ -33,8 +55,29 @@ function feePayer() {
   return cachedFeePayer;
 }
 
-function isCraft(data) {
-  return data.length >= 8 && Buffer.from(data.subarray(0, 8)).equals(CRAFT_DISCRIMINATOR);
+/** The role the sponsor may take in this instruction, if any. */
+function sponsorPosition(data) {
+  if (data.length < 8) {
+    return null;
+  }
+  const head = Buffer.from(data.subarray(0, 8));
+  const role = SPONSOR_ROLES.find((r) => head.equals(r.discriminator));
+  return role ? role.position : null;
+}
+
+/** Why a compute budget instruction must not be sponsored, or null. */
+function rejectComputeBudget(data) {
+  if (data.length < 1 || data[0] !== SET_COMPUTE_UNIT_LIMIT) {
+    return "only a compute unit limit may be sponsored";
+  }
+  if (data.length !== 5) {
+    return "malformed compute unit limit";
+  }
+  const units = Buffer.from(data).readUInt32LE(1);
+  if (units > MAX_COMPUTE_UNITS) {
+    return `compute unit limit ${units} is above the ceiling`;
+  }
+  return null;
 }
 
 /** Returns why a transaction must not be sponsored, or null if it is safe. */
@@ -54,17 +97,20 @@ export function rejectReason(tx, sponsor) {
     if (!SPONSORED_PROGRAMS.has(program)) {
       return `program ${program} is not sponsored`;
     }
+    if (program === COMPUTE_BUDGET_PROGRAM) {
+      const reason = rejectComputeBudget(ix.data);
+      if (reason) {
+        return reason;
+      }
+      continue;
+    }
 
-    ix.accountKeyIndexes.forEach((keyIndex, position) => {
-      if (keyIndex !== 0) {
-        return;
+    const allowedPosition = program === PIXELVAULT_PROGRAM ? sponsorPosition(ix.data) : null;
+    for (const [position, keyIndex] of ix.accountKeyIndexes.entries()) {
+      if (keyIndex === 0 && position !== allowedPosition) {
+        return "the sponsor may only pay rent and fees, never act as a player";
       }
-      const allowed =
-        program === PIXELVAULT_PROGRAM && isCraft(ix.data) && position === RENT_PAYER_POSITION;
-      if (!allowed) {
-        throw new Error("instructions may only use the sponsor as the rent payer of craft");
-      }
-    });
+    }
   }
 
   for (let i = 1; i < message.header.numRequiredSignatures; i++) {

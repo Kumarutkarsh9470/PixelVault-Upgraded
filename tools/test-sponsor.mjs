@@ -83,11 +83,23 @@ const sponsorInMemo = new TransactionInstruction({
 const misuse = await submit(build(q, player, [sponsorInMemo]));
 console.log("sponsor-as-account attempt:", misuse.status, misuse.body);
 
+// 5. Raising the compute limit is allowed: replaying a race needs it.
+const raise = ComputeBudgetProgram.setComputeUnitLimit({ units: 1_200_000 });
+const limit = await submit(build(q, player, [raise, memo]));
+console.log("compute limit:", limit.status, limit.body);
+
+// 6. But not past the ceiling a transaction can actually use.
+const absurd = ComputeBudgetProgram.setComputeUnitLimit({ units: 4_000_000_000 });
+const tooMuch = await submit(build(q, player, [absurd, memo]));
+console.log("absurd compute limit:", tooMuch.status, tooMuch.body);
+
 const passed =
   ok.status === 200 &&
   !!ok.body.signature &&
   bad.status === 400 &&
   fee.status === 400 &&
-  misuse.status === 400;
+  misuse.status === 400 &&
+  limit.status === 200 &&
+  tooMuch.status === 400;
 console.log(passed ? "PASS" : "FAIL");
 process.exit(passed ? 0 : 1);

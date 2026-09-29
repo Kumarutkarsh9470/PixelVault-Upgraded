@@ -137,4 +137,9 @@ pub mod pixelvault {
     pub fn verify_run(ctx: Context<VerifyRun>, steps: u32) -> Result<()> {
         instructions::verify_run::handle_verify_run(ctx, steps)
     }
+
+    /// Return the run buffer's rent to whoever paid it.
+    pub fn close_run(ctx: Context<CloseRun>) -> Result<()> {
+        instructions::verify_run::handle_close_run(ctx)
+    }
 }

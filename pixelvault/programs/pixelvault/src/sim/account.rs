@@ -70,6 +70,9 @@ impl TrackConfig {
 #[repr(C)]
 pub struct RunBuffer {
     pub player: Pubkey,
+    /// Who paid this buffer's rent, and who gets it back when it closes. The
+    /// sponsor pays it for players who hold no SOL.
+    pub payer: Pubkey,
     pub track_id: u64,
     /// Where the car had reached at the end of the last transaction.
     pub x: Fx,
@@ -101,9 +104,10 @@ pub struct RunBuffer {
 
 impl RunBuffer {
     /// Clears the buffer for a fresh attempt and puts the car on the grid.
-    pub fn reset(&mut self, player: Pubkey, track_id: u64, trace_len: u16, track: &TrackConfig, bump: u8) {
+    pub fn reset(&mut self, player: Pubkey, payer: Pubkey, track_id: u64, trace_len: u16, track: &TrackConfig, bump: u8) {
         let car = Car::spawn(&track.view());
         self.player = player;
+        self.payer = payer;
         self.track_id = track_id;
         self.trace_len = trace_len;
         self.written = 0;

@@ -12,8 +12,12 @@ export type Session = {
 export type RunResult = {
   valid: boolean;
   reason: string | null;
-  /** Whether the Solana program has replayed this run and agreed with it. */
+  /** Whether the Solana program replayed this run and agreed with it. */
   verified: boolean;
+  /** The time the program derived, which is what the medal was judged on. */
+  totalMs: number;
+  /** The transaction that verified it, for anyone who wants to check. */
+  signature: string | null;
   medal: Medal;
   reward: { material: string; amount: number };
   materials: Record<string, number>;
@@ -65,6 +69,8 @@ export const api = {
     laps: number;
     splits: number[];
     trace: string;
+    /** The transaction in which the chain replayed this run. */
+    signature: string | null;
   }) =>
     call<RunResult>("/api/run", run),
   grant: (wallet: string, gameId: number, classId: number) => call<Grant>("/api/grant", { wallet, gameId, classId }),

@@ -6,6 +6,7 @@ import { address, type Instruction } from "@solana/kit";
 import catalogData from "../data/catalog.json";
 import { api, type RunResult, type Session } from "../lib/api";
 import { balancesOf, classConfig, compileSponsored, craftInstructions, redeemInstruction, type Quote } from "../lib/program";
+import { trackChain, verifyRunOnChain, type VerifyProgress } from "../lib/verify";
 import { SOLANA_CHAIN, SPONSOR_API } from "../config";
 import type { Loadout, RaceFinished } from "../lib/unity";
 
@@ -34,6 +35,8 @@ type GameState = {
   route: (from: Item, to: Item) => Promise<string>;
   equip: (item: Item | null, type: "chassis" | "underglow" | "trail") => void;
   submitRun: (result: RaceFinished) => Promise<RunResult>;
+  /** How far the chain has got replaying the run just finished. */
+  verifying: VerifyProgress | null;
   clearError: () => void;
 };
 
@@ -63,6 +66,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [balances, setBalances] = useState<Balances>({ usdc: 0, items: {} });
   const [loadout, setLoadout] = useState<Loadout>(readLoadout);
   const [busy, setBusy] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState<VerifyProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const starterRequested = useRef(false);
 
@@ -196,11 +200,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const submitRun = useCallback(
     async (result: RaceFinished) => {
+      // The chain replays the run before the server will reward it: the medal
+      // is judged on the time the program derives, not the one we report.
+      let signature: string | null = null;
+      if (wallet && trackChain(result.trackId)) {
+        try {
+          signature = await verifyRunOnChain(
+            wallet.address,
+            result.trackId,
+            result.trace,
+            result.steps,
+            sponsor,
+            setVerifying,
+          );
+        } catch (e) {
+          setError(e instanceof Error ? e.message : String(e));
+        } finally {
+          setVerifying(null);
+        }
+      }
+
       const response = await api.submitRun({
         trackId: result.trackId,
         totalMs: result.totalMs,
         laps: result.laps,
         steps: result.steps,
+        signature,
         splits: result.splits,
         trace: result.trace,
       });
@@ -215,7 +240,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       );
       return response;
     },
-    [],
+    [wallet, sponsor],
   );
 
   const value: GameState = {
@@ -225,6 +250,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     balances,
     loadout: effectiveLoadout,
     busy,
+    verifying,
     error,
     owned,
     refresh,

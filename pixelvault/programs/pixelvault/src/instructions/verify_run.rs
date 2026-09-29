@@ -56,7 +56,14 @@ pub fn handle_open_run(ctx: Context<OpenRun>, track_id: u64, trace_len: u16) -> 
         Ok(run) => run,
         Err(_) => ctx.accounts.run.load_mut()?,
     };
-    run.reset(ctx.accounts.player.key(), track_id, trace_len, &track, ctx.bumps.run);
+    run.reset(
+        ctx.accounts.player.key(),
+        ctx.accounts.payer.key(),
+        track_id,
+        trace_len,
+        &track,
+        ctx.bumps.run,
+    );
     Ok(())
 }
 
@@ -186,5 +193,28 @@ pub fn handle_verify_run(ctx: Context<VerifyRun>, steps: u32) -> Result<()> {
         trace_hash,
         rank: rank.map(|r| r + 1).unwrap_or(0),
     });
+    Ok(())
+}
+
+#[derive(Accounts)]
+pub struct CloseRun<'info> {
+    pub player: Signer<'info>,
+    #[account(
+        mut,
+        close = rent_refund,
+        seeds = [RUN_SEED, player.key().as_ref(), &run.load()?.track_id.to_le_bytes()],
+        bump = run.load()?.bump,
+        has_one = player @ PixelVaultError::Unauthorized,
+        constraint = run.load()?.payer == rent_refund.key() @ PixelVaultError::Unauthorized,
+    )]
+    pub run: AccountLoader<'info, RunBuffer>,
+    /// CHECK: whoever paid the rent, checked against the buffer above.
+    #[account(mut)]
+    pub rent_refund: UncheckedAccount<'info>,
+}
+
+/// Gives the buffer's rent back to whoever paid it, once the run has been
+/// verified, so sponsoring a player's verification costs only the fees.
+pub fn handle_close_run(_ctx: Context<CloseRun>) -> Result<()> {
     Ok(())
 }
