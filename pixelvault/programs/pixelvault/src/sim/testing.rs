@@ -113,6 +113,12 @@ impl Bot {
             let turn = abs(mul(a.fx, b.fz) - mul(a.fz, b.fx)); // |sin| of the angle between
             if turn > ONE / 200 {
                 let radius = div(mul(track.spacing, fx(3)), turn);
+                // Anything this open is a straight, and a radius large enough
+                // to overflow the fixed-point range is certainly one.
+                if radius > fx(600) {
+                    s += 2;
+                    continue;
+                }
                 let corner = sqrt(mul(self.grip, radius));
                 let braking = sqrt(mul(corner, corner) + mul(fx(36), mul(track.spacing, fx(s))));
                 if braking < safe {

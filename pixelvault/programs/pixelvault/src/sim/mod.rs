@@ -11,6 +11,8 @@
 pub mod account;
 pub mod car;
 pub mod fixed;
+#[cfg(not(target_os = "solana"))]
+pub mod parity;
 /// Off-chain helpers (track building, the calibration bot). Never compiled
 /// into the program binary.
 #[cfg(not(target_os = "solana"))]
