@@ -113,9 +113,10 @@ impl Bot {
             let turn = abs(mul(a.fx, b.fz) - mul(a.fz, b.fx)); // |sin| of the angle between
             if turn > ONE / 200 {
                 let radius = div(mul(track.spacing, fx(3)), turn);
-                // Anything this open is a straight, and a radius large enough
-                // to overflow the fixed-point range is certainly one.
-                if radius > fx(600) {
+                // Anything this open is a straight. The cap also keeps
+                // grip * radius inside the fixed-point range, which matters
+                // most at the high cornering limits calibration tries.
+                if radius > div(fx(25_000), self.grip) {
                     s += 2;
                     continue;
                 }

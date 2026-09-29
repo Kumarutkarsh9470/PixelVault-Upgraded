@@ -48,42 +48,6 @@ public static class GameBuilder
         }
     }
 
-    /// Windows player used only for headless medal calibration (CalibrationRunner).
-    [MenuItem("PixelVault/Build Calibration")]
-    public static void BuildCalibration()
-    {
-        try
-        {
-            CreateMaterials();
-            CreateScene();
-            ConfigurePlayer();
-            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.Mono2x);
-            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
-            PlayerSettings.runInBackground = true;
-
-            BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
-            {
-                scenes = new[] { ScenePath },
-                locationPathName = "Builds/Calibration/PixelVaultRacer.exe",
-                target = BuildTarget.StandaloneWindows64,
-                options = BuildOptions.None,
-            });
-            Debug.Log($"[GameBuilder] calibration result={report.summary.result}");
-            if (Application.isBatchMode)
-            {
-                EditorApplication.Exit(report.summary.result == BuildResult.Succeeded ? 0 : 1);
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError("[GameBuilder] " + e);
-            if (Application.isBatchMode)
-            {
-                EditorApplication.Exit(1);
-            }
-        }
-    }
-
     /// Materials saved as assets so the shader variants they use (emission,
     /// transparency) survive build-time stripping. Runtime code clones them.
     static void CreateMaterials()

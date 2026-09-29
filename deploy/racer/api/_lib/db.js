@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { neon } from "@neondatabase/serverless";
 
 /** Bump when db/schema.sql changes; the next request applies it. */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 let client;
 let schemaReady;

@@ -9,6 +9,9 @@
 //! so a replay on-chain matches the run the player drove exactly.
 
 pub mod account;
+/// Medal calibration. Test-only: it reads JSON, which the program never does.
+#[cfg(test)]
+pub mod calibrate;
 pub mod car;
 pub mod fixed;
 #[cfg(not(target_os = "solana"))]

@@ -1,7 +1,7 @@
 // Accepts a finished race, checks it is plausible, and pays out materials.
 import { sql } from "./_lib/db.js";
 import { findTrack, materialFor, medalFor, rejectReason, rewardFor } from "./_lib/game.js";
-import { cleanGhost, readBody, route } from "./_lib/http.js";
+import { cleanTrace, readBody, route } from "./_lib/http.js";
 import { addMaterial, materialsOf, upsertPlayer } from "./_lib/players.js";
 import { verifyInitData } from "./_lib/telegram.js";
 
@@ -24,7 +24,8 @@ export default route(["POST"], async (req) => {
   const valid = reason === null;
   const medal = valid ? medalFor(track, run.totalMs) : null;
   const material = materialFor(track);
-  const ghost = valid ? cleanGhost(body.ghost, run.totalMs) : null;
+  const trace = valid ? cleanTrace(body.trace) : null;
+  const steps = Number.isInteger(body.steps) ? body.steps : null;
 
   let reward = rewardFor(medal);
   if (reward > 0) {
@@ -35,9 +36,9 @@ export default route(["POST"], async (req) => {
   }
 
   const [{ id: runId }] = await sql()`
-    insert into runs (telegram_id, track_id, total_ms, respawns, medal, valid, reject_reason, splits, reward)
+    insert into runs (telegram_id, track_id, total_ms, respawns, medal, valid, reject_reason, splits, reward, trace, steps)
     values (${user.id}, ${track.id}, ${run.totalMs}, ${run.respawns}, ${medal}, ${valid}, ${reason},
-            ${Array.isArray(run.splits) ? run.splits : []}, ${reward})
+            ${Array.isArray(run.splits) ? run.splits : []}, ${reward}, ${trace}, ${steps})
     returning id`;
   await addMaterial(user.id, material, reward);
 
@@ -46,11 +47,11 @@ export default route(["POST"], async (req) => {
   let rank = null;
   if (valid) {
     const improved = await sql()`
-      insert into best_times (telegram_id, track_id, total_ms, run_id, ghost, splits)
-      values (${user.id}, ${track.id}, ${run.totalMs}, ${runId}, ${ghost ? JSON.stringify(ghost) : null}, ${run.splits})
+      insert into best_times (telegram_id, track_id, total_ms, run_id, trace, steps, splits)
+      values (${user.id}, ${track.id}, ${run.totalMs}, ${runId}, ${trace}, ${steps}, ${run.splits})
       on conflict (telegram_id, track_id) do update
         set total_ms = excluded.total_ms, run_id = excluded.run_id, achieved_at = now(),
-            ghost = excluded.ghost, splits = excluded.splits
+            trace = excluded.trace, steps = excluded.steps, splits = excluded.splits
         where excluded.total_ms < best_times.total_ms
       returning total_ms`;
     personalBest = improved.length > 0;
@@ -66,6 +67,9 @@ export default route(["POST"], async (req) => {
   return {
     valid,
     reason,
+    // The chain has the final say; this is the game server's own check, which
+    // only gates material rewards until on-chain verification lands.
+    verified: false,
     medal,
     reward: { material, amount: reward },
     materials: await materialsOf(user.id),

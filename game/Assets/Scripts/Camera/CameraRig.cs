@@ -80,7 +80,7 @@ public class CameraRig : MonoBehaviour
             {
                 transform.position = Vector3.SmoothDamp(transform.position, DesiredPosition(), ref velocity, 0.1f);
                 transform.LookAt(LookPoint());
-                float speed01 = car != null ? Mathf.Clamp01(car.Speed / car.MaxSpeed) : 0f;
+                float speed01 = car != null ? Mathf.Clamp01(car.Speed / CarController.MaxSpeed) : 0f;
                 float fov = Mathf.Lerp(62f, 78f, speed01) + boostKick * 8f;
                 cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, fov, 5f * dt);
                 break;

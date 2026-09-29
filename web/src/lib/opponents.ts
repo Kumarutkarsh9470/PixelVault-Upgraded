@@ -5,39 +5,31 @@ import { api } from "./api";
 
 export type OpponentKind = "nova" | "leader" | "best" | "none";
 
-export type GhostData = { interval: number; samples: number[] };
-
 export type Opponent = {
   kind: Exclude<OpponentKind, "none">;
   name: string;
   totalMs: number;
   /** Race time at each checkpoint crossing, for live split deltas. */
   splits: number[];
-  ghost: GhostData;
+  /** The opponent's inputs, base64. The game replays them to race you. */
+  trace: string;
 };
 
-type RivalFile = Record<string, { name: string; totalMs: number; splits: number[]; ghost: GhostData }>;
+type RivalFile = Record<string, { name: string; totalMs: number; splits: number[]; trace: string }>;
 
 const bestKey = (trackId: string) => `pv_best_${trackId}`;
-const legacyGhostKey = (trackId: string) => `pv_ghost_${trackId}`;
 const leaders = new Map<string, Promise<Opponent | null>>();
 
 export function nova(trackId: string): Opponent | null {
   const r = (rivals as RivalFile)[trackId];
-  return r ? { kind: "nova", name: r.name, totalMs: r.totalMs, splits: r.splits, ghost: r.ghost } : null;
+  return r ? { kind: "nova", name: r.name, totalMs: r.totalMs, splits: r.splits, trace: r.trace } : null;
 }
 
 export function personalBest(trackId: string): Opponent | null {
   try {
     const saved = JSON.parse(localStorage.getItem(bestKey(trackId)) || "null");
-    if (saved?.ghost?.samples?.length) {
-      return { kind: "best", name: "Your best", totalMs: saved.totalMs, splits: saved.splits ?? [], ghost: saved.ghost };
-    }
-    // Earlier versions stored only the ghost.
-    const ghost = JSON.parse(localStorage.getItem(legacyGhostKey(trackId)) || "null");
-    if (ghost?.samples?.length) {
-      const totalMs = Math.round((ghost.samples.length / 4) * ghost.interval * 1000);
-      return { kind: "best", name: "Your best", totalMs, splits: [], ghost };
+    if (typeof saved?.trace === "string" && saved.trace.length > 0) {
+      return { kind: "best", name: "Your best", totalMs: saved.totalMs, splits: saved.splits ?? [], trace: saved.trace };
     }
   } catch {
     // Unreadable storage: no personal ghost.
@@ -45,10 +37,10 @@ export function personalBest(trackId: string): Opponent | null {
   return null;
 }
 
-export function savePersonalBest(trackId: string, run: { totalMs: number; splits: number[]; ghost: GhostData }) {
+export function savePersonalBest(trackId: string, run: { totalMs: number; splits: number[]; trace: string }) {
   try {
     localStorage.setItem(bestKey(trackId), JSON.stringify(run));
-    localStorage.removeItem(legacyGhostKey(trackId));
+    localStorage.removeItem(`pv_ghost_${trackId}`);
   } catch {
     // Storage full or unavailable; the server still keeps the best.
   }
@@ -61,7 +53,7 @@ export function leader(trackId: string, refresh = false): Promise<Opponent | nul
       api
         .leader(trackId)
         .then(({ leader: l }) =>
-          l ? { kind: "leader" as const, name: l.name, totalMs: l.totalMs, splits: l.splits, ghost: l.ghost } : null,
+          l ? { kind: "leader" as const, name: l.name, totalMs: l.totalMs, splits: l.splits, trace: l.trace } : null,
         )
         .catch(() => null),
     );

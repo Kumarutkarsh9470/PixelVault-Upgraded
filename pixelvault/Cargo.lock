@@ -2172,6 +2172,7 @@ dependencies = [
  "anchor-spl",
  "bytemuck",
  "litesvm",
+ "serde_json",
  "solana-instructions-sysvar 3.0.1",
  "solana-keypair",
  "solana-message",

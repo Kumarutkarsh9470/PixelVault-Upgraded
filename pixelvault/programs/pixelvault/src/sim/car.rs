@@ -28,12 +28,9 @@ const STEER_RATE: Fx = fx(7);
 const LINEAR_DAMPING: Fx = pct(5);
 const DRIFT_MIN_SPEED: Fx = fx(16);
 const DRIFT_MIN_STEER: Fx = pct(40);
-const DRIFT_CHARGE_SECONDS: Fx = num(1, 4);
 const DRIFT_MIN_CHARGE: Fx = pct(35);
 const DRIFT_BOOST_BASE: Fx = pct(50);
 const DRIFT_BOOST_SPAN: Fx = num(1, 3);
-const LOW_SPEED_REFERENCE: Fx = fx(6);
-const IMPACT_REFERENCE: Fx = fx(22);
 const IMPACT_SPEED_LOSS: Fx = pct(40);
 const WALL_SCRAPE: Fx = pct(99) - pct(1) / 2; // 0.985
 const BOOST_PAD_STEPS: u16 = 66; // 1.1 s
@@ -44,9 +41,12 @@ const BOOST_PAD_HALF_LENGTH: i32 = 2;
 // than multiplication on-chain, and a race is a few thousand steps.
 const INV_MAX_SPEED: Fx = ONE / 50;
 const INV_BOOST_MAX_SPEED: Fx = ONE / 62;
+/// Below six metres a second the car barely turns.
 const INV_LOW_SPEED_REFERENCE: Fx = ONE / 6;
+/// A wall hit at twenty-two metres a second counts as a full-strength knock.
 const INV_IMPACT_REFERENCE: Fx = ONE / 22;
 const BOOST_MAX_SPEED_SQUARED: Fx = mul_const(BOOST_MAX_SPEED, BOOST_MAX_SPEED);
+/// A drift charges fully in 1.4 seconds.
 const DRIFT_CHARGE_PER_STEP: Fx = mul_const(DT, ONE / 14 * 10);
 const STEER_PER_STEP: Fx = mul_const(STEER_RATE, DT);
 const DAMPING_PER_STEP: Fx = ONE - mul_const(LINEAR_DAMPING, DT);

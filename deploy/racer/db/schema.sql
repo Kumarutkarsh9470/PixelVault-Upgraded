@@ -47,6 +47,13 @@ create index if not exists best_times_leaderboard on best_times (track_id, total
 alter table best_times add column if not exists ghost jsonb;
 alter table best_times add column if not exists splits int[];
 
+-- v3: a run is the inputs that produced it, which the chain replays. The old
+-- position ghosts are no longer written.
+alter table best_times add column if not exists trace text;
+alter table best_times add column if not exists steps int;
+alter table runs add column if not exists trace text;
+alter table runs add column if not exists steps int;
+
 -- Material grants the game server has signed. Materials are reserved when a
 -- grant is issued and settled against the chain: the player's on-chain grant
 -- sequence tells us whether the craft happened.

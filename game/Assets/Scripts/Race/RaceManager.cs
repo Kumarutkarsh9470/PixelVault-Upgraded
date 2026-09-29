@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// Timing, laps, checkpoint order, respawns and ghost recording for one race.
-/// Checkpoint 0 is the start/finish line; the car spawns just behind it, so
-/// the first crossing starts lap 1 and each later crossing (after every other
-/// checkpoint in order) completes a lap.
+/// Runs one race and reports it.
+///
+/// Nothing here measures time: the simulation counts its own steps, and a step
+/// is exactly a sixtieth of a second. The finish time the player sees is the
+/// same number the Solana program derives when it replays the trace, so the
+/// HUD and the leaderboard can never disagree.
 public class RaceManager : MonoBehaviour
 {
     public static RaceManager Instance { get; private set; }
@@ -13,7 +15,6 @@ public class RaceManager : MonoBehaviour
     /// Raised in-process when a race finishes (used by calibration runs).
     public static event Action<RaceFinishedEvent> Finished;
 
-    const float GhostInterval = 0.1f;
     const float HudInterval = 0.05f;
 
     public bool Racing { get; private set; }
@@ -23,27 +24,20 @@ public class RaceManager : MonoBehaviour
     CarVisuals visuals;
     CarEffects effects;
     GhostPlayer ghost;
-    BuiltTrack track;
+    SimTrack track;
     string trackId;
     int laps;
+    int checkpointsPerLap;
 
-    float raceTime;
-    int nextCheckpoint;
-    int lastCheckpoint;
-    int respawns;
     readonly List<int> splits = new List<int>();
-    readonly List<float> ghostSamples = new List<float>();
-    float ghostTimer;
     float hudTimer;
-    int nearestSample;
-    float stuckTimer;
 
     void Awake()
     {
         Instance = this;
     }
 
-    public void Prepare(BuiltTrack builtTrack, CarController raceCar, CarVisuals raceVisuals, GhostPlayer ghostPlayer, string id, int lapCount)
+    public void Prepare(SimTrack simTrack, CarController raceCar, CarVisuals raceVisuals, GhostPlayer ghostPlayer, string id, int lapCount)
     {
         if (car != raceCar)
         {
@@ -52,29 +46,26 @@ public class RaceManager : MonoBehaviour
                 car.Impact -= OnImpact;
                 car.Boosted -= OnBoost;
                 car.DriftStarted -= OnDriftStarted;
+                car.Checkpoint -= OnCheckpoint;
             }
             raceCar.Impact += OnImpact;
             raceCar.Boosted += OnBoost;
             raceCar.DriftStarted += OnDriftStarted;
+            raceCar.Checkpoint += OnCheckpoint;
         }
-        track = builtTrack;
+        track = simTrack;
         car = raceCar;
         visuals = raceVisuals;
         effects = raceCar.GetComponent<CarEffects>();
         ghost = ghostPlayer;
         trackId = id;
         laps = Mathf.Max(1, lapCount);
+        checkpointsPerLap = track != null ? track.Checkpoints.Length : 1;
         Racing = false;
         Lap = 0;
-        raceTime = 0f;
-        nextCheckpoint = 0;
-        lastCheckpoint = 0;
-        respawns = 0;
-        nearestSample = (track.Path.Count - 4 + track.Path.Count) % track.Path.Count;
         splits.Clear();
-        ghostSamples.Clear();
         car.ControlsEnabled = false;
-        car.Teleport(track.SpawnPosition, track.SpawnRotation);
+        car.Reset();
         visuals.ClearTrails();
         if (effects != null) effects.ClearTrails();
     }
@@ -86,6 +77,10 @@ public class RaceManager : MonoBehaviour
             return;
         }
         Racing = true;
+        Lap = 1;
+        splits.Clear();
+        car.Reset();
+        car.BeginRecording();
         car.ControlsEnabled = true;
         WebBridge.Emit("raceStarted");
     }
@@ -105,35 +100,40 @@ public class RaceManager : MonoBehaviour
         if (Racing) WebBridge.Emit("drift");
     }
 
-    public void OnCheckpoint(int index)
+    /// The simulation crossed a checkpoint. Crossing the start line completes a
+    /// lap, and the last one ends the race.
+    void OnCheckpoint(int index, int steps)
     {
-        if (!Racing || index != nextCheckpoint)
+        if (!Racing)
         {
             return;
         }
-        int timeMs = Mathf.RoundToInt(raceTime * 1000f);
-        lastCheckpoint = index;
+        // The very first crossing is the start line as the race begins, which
+        // is not a split: the server counts one per checkpoint per lap.
+        if (car.Crossings > 1)
+        {
+            splits.Add(Milliseconds(steps));
+        }
 
         if (index == 0)
         {
-            Lap++;
-            if (Lap > 1)
+            // The first crossing starts lap one; later ones complete a lap.
+            int completed = car.Crossings / checkpointsPerLap;
+            if (completed >= 1)
             {
-                splits.Add(timeMs);
-                WebBridge.Emit("lap", new CheckpointEvent { index = 0, lap = Lap - 1, timeMs = timeMs });
+                WebBridge.Emit("lap", new CheckpointEvent { index = 0, lap = completed, timeMs = Milliseconds(steps) });
             }
-            if (Lap > laps)
+            if (completed >= laps)
             {
-                Finish(timeMs);
+                Finish(steps);
                 return;
             }
+            Lap = Mathf.Clamp(completed + 1, 1, laps);
         }
         else
         {
-            splits.Add(timeMs);
-            WebBridge.Emit("checkpoint", new CheckpointEvent { index = index, lap = Lap, timeMs = timeMs });
+            WebBridge.Emit("checkpoint", new CheckpointEvent { index = index, lap = Lap, timeMs = Milliseconds(steps) });
         }
-        nextCheckpoint = (index + 1) % track.Checkpoints.Count;
     }
 
     void Update()
@@ -142,108 +142,56 @@ public class RaceManager : MonoBehaviour
         {
             return;
         }
-        raceTime += Time.deltaTime;
-
-        ghostTimer += Time.deltaTime;
-        if (ghostTimer >= GhostInterval)
-        {
-            ghostTimer -= GhostInterval;
-            Transform t = car.transform;
-            ghostSamples.Add(Mathf.Round(t.position.x * 100f) / 100f);
-            ghostSamples.Add(Mathf.Round(t.position.y * 100f) / 100f);
-            ghostSamples.Add(Mathf.Round(t.position.z * 100f) / 100f);
-            ghostSamples.Add(Mathf.Round(t.eulerAngles.y * 10f) / 10f);
-        }
-
         hudTimer += Time.deltaTime;
-        if (hudTimer >= HudInterval)
+        if (hudTimer < HudInterval)
         {
-            hudTimer = 0f;
-            Vector3 p = car.transform.position;
-            bool ghostVisible = ghost != null && ghost.Visible;
-            Vector3 g = ghostVisible ? ghost.transform.position : Vector3.zero;
-            WebBridge.Emit("hud", new HudEvent
-            {
-                timeMs = Mathf.RoundToInt(raceTime * 1000f),
-                lap = Mathf.Clamp(Lap, 1, laps),
-                laps = laps,
-                speedKmh = Mathf.RoundToInt(car.SpeedKmh),
-                x = p.x,
-                z = p.z,
-                gx = g.x,
-                gz = g.z,
-                ghost = ghostVisible,
-                drift = car.Drifting,
-                charge = Mathf.RoundToInt(car.DriftCharge * 100f),
-                boost = car.Boosting,
-            });
+            return;
         }
+        hudTimer = 0f;
 
-        CheckRecovery();
+        Vector3 p = car.transform.position;
+        bool ghostVisible = ghost != null && ghost.Visible;
+        Vector3 g = ghostVisible ? ghost.transform.position : Vector3.zero;
+        WebBridge.Emit("hud", new HudEvent
+        {
+            timeMs = Milliseconds(car.Steps),
+            lap = Mathf.Clamp(Lap, 1, laps),
+            laps = laps,
+            speedKmh = Mathf.RoundToInt(car.SpeedKmh),
+            x = p.x,
+            z = p.z,
+            gx = g.x,
+            gz = g.z,
+            ghost = ghostVisible,
+            drift = car.Drifting,
+            charge = Mathf.RoundToInt(car.DriftCharge * 100f),
+            boost = car.Boosting,
+        });
     }
 
-    /// Puts the car back on the road at the last checkpoint if it is stuck,
-    /// has somehow left the circuit, or the player asks to reset.
-    void CheckRecovery()
+    /// Steps into milliseconds. A step is a sixtieth of a second, exactly as
+    /// the program counts it.
+    public static int Milliseconds(int steps)
     {
-        TrackPath path = track.Path;
-        Vector3 position = car.transform.position;
-
-        // Track the nearest centreline sample by searching a window around the last one.
-        int best = nearestSample;
-        float bestDistance = float.MaxValue;
-        for (int offset = -12; offset <= 12; offset++)
-        {
-            int i = ((nearestSample + offset) % path.Count + path.Count) % path.Count;
-            float d = (path.Positions[i] - position).sqrMagnitude;
-            if (d < bestDistance)
-            {
-                bestDistance = d;
-                best = i;
-            }
-        }
-        nearestSample = best;
-
-        bool offCircuit = Mathf.Sqrt(bestDistance) > track.Width * 0.5f + 8f || position.y < -3f;
-        stuckTimer = car.Speed < 1.5f ? stuckTimer + Time.deltaTime : 0f;
-        if (offCircuit || stuckTimer > 2.5f || Input.GetKeyDown(KeyCode.R))
-        {
-            Respawn();
-        }
+        return (int)((long)steps * 1000 / CarSim.StepsPerSecond);
     }
 
-    public void Respawn()
-    {
-        int sample = track.CheckpointSamples[lastCheckpoint];
-        if (lastCheckpoint == 0 && Lap <= 1)
-        {
-            car.Teleport(track.SpawnPosition, track.SpawnRotation);
-        }
-        else
-        {
-            TrackPath path = track.Path;
-            car.Teleport(path.Positions[sample] + Vector3.up * 0.3f, Quaternion.LookRotation(path.Forwards[sample]));
-            nearestSample = sample;
-        }
-        stuckTimer = 0f;
-        respawns++;
-        visuals.ClearTrails();
-        if (effects != null) effects.ClearTrails();
-        WebBridge.Emit("respawn");
-    }
-
-    void Finish(int timeMs)
+    void Finish(int steps)
     {
         Racing = false;
         car.ControlsEnabled = false;
+        car.StopRecording();
+        byte[] trace = car.Trace();
+
         var result = new RaceFinishedEvent
         {
             trackId = trackId,
-            totalMs = timeMs,
+            totalMs = Milliseconds(steps),
+            steps = steps,
             laps = laps,
-            respawns = respawns,
             splits = splits.ToArray(),
-            ghost = new GhostPayload { interval = GhostInterval, samples = ghostSamples.ToArray() },
+            // The whole run, for the chain to replay and for others to race.
+            trace = Convert.ToBase64String(trace),
         };
         WebBridge.Emit("raceFinished", result);
         Finished?.Invoke(result);

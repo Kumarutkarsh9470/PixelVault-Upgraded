@@ -59,7 +59,7 @@ export function Results({
             <div className="stats">
               <Stat label="Best" value={formatTime(result.best)} />
               <Stat label="Rank" value={result.rank ? `#${result.rank}` : "—"} />
-              <Stat label="Respawns" value={finished.respawns} />
+              <Stat label="Verified" value={result.verified ? "on-chain ✓" : "pending"} />
             </div>
 
             {result.reward.amount > 0 ? (

@@ -15,22 +15,21 @@ export function readBody(req) {
   return typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 }
 
-/** Longest ghost we store: 10 samples a second for five minutes, 4 numbers each. */
-const MAX_GHOST_SAMPLES = 4 * 10 * 300;
+/** Longest trace the chain will verify, as base64. */
+const MAX_TRACE_BASE64 = 2048 * 4 / 3 + 8;
 
 /**
- * A replay is display-only (it never affects rewards), but it is shown to other
- * players, so accept only a well-formed one whose length matches the run.
+ * A run's inputs, as the game recorded them. The chain is what decides whether
+ * they are a valid run; this only checks the string is a plausible trace
+ * before it goes in the database or out to another player.
  */
-export function cleanGhost(ghost, totalMs) {
-  if (!ghost || typeof ghost !== "object") return null;
-  const { interval, samples } = ghost;
-  if (typeof interval !== "number" || interval < 0.05 || interval > 0.5) return null;
-  if (!Array.isArray(samples) || samples.length < 8 || samples.length % 4 !== 0 || samples.length > MAX_GHOST_SAMPLES) return null;
-  if (!samples.every((v) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) < 100000)) return null;
-  const durationMs = (samples.length / 4) * interval * 1000;
-  if (Math.abs(durationMs - totalMs) > 1500) return null;
-  return { interval, samples: samples.map((v) => Math.round(v * 100) / 100) };
+export function cleanTrace(trace) {
+  if (typeof trace !== "string" || trace.length < 4 || trace.length > MAX_TRACE_BASE64) return null;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(trace)) return null;
+  // Traces are (input, repeat) pairs, so they decode to an even byte count.
+  const bytes = (trace.length / 4) * 3 - (trace.endsWith("==") ? 2 : trace.endsWith("=") ? 1 : 0);
+  if (!Number.isInteger(bytes) || bytes % 2 !== 0) return null;
+  return trace;
 }
 
 /** Wraps a handler with method checks and consistent JSON errors. */

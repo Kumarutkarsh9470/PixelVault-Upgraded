@@ -200,9 +200,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         trackId: result.trackId,
         totalMs: result.totalMs,
         laps: result.laps,
-        respawns: result.respawns,
+        steps: result.steps,
         splits: result.splits,
-        ghost: result.ghost,
+        trace: result.trace,
       });
       setSession((s) =>
         s

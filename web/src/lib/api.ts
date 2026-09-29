@@ -12,6 +12,8 @@ export type Session = {
 export type RunResult = {
   valid: boolean;
   reason: string | null;
+  /** Whether the Solana program has replayed this run and agreed with it. */
+  verified: boolean;
   medal: Medal;
   reward: { material: string; amount: number };
   materials: Record<string, number>;
@@ -35,7 +37,8 @@ export type LeaderGhost = {
   name: string;
   totalMs: number;
   splits: number[];
-  ghost: { interval: number; samples: number[] };
+  /** The leader's inputs, base64, for racing their line. */
+  trace: string;
 };
 
 export type LeaderboardEntry = { rank: number; name: string; totalMs: number; at: string };
@@ -58,10 +61,10 @@ export const api = {
   submitRun: (run: {
     trackId: string;
     totalMs: number;
+    steps: number;
     laps: number;
-    respawns: number;
     splits: number[];
-    ghost: { interval: number; samples: number[] };
+    trace: string;
   }) =>
     call<RunResult>("/api/run", run),
   grant: (wallet: string, gameId: number, classId: number) => call<Grant>("/api/grant", { wallet, gameId, classId }),

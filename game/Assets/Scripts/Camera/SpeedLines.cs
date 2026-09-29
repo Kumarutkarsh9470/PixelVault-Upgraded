@@ -48,7 +48,7 @@ public class SpeedLines : MonoBehaviour
         float rate = 0f;
         if (Active && Car != null && Car.ControlsEnabled)
         {
-            float speed01 = Mathf.InverseLerp(Car.MaxSpeed * 0.7f, Car.MaxSpeed, Car.Speed);
+            float speed01 = Mathf.InverseLerp(CarController.MaxSpeed * 0.7f, CarController.MaxSpeed, Car.Speed);
             rate = speed01 * 60f + (Car.Boosting ? 90f : 0f);
         }
         var emission = lines.emission;

@@ -82,10 +82,12 @@ export type Loadout = { chassis: string; underglow: string; trail: string };
 export type RaceFinished = {
   trackId: string;
   totalMs: number;
+  /** Simulation steps, which is the time the chain derives when it replays. */
+  steps: number;
   laps: number;
-  respawns: number;
   splits: number[];
-  ghost: { interval: number; samples: number[] };
+  /** The inputs pressed, base64 encoded: what gets verified on-chain. */
+  trace: string;
 };
 
 export type Hud = {
