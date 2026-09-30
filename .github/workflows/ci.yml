@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  program:
+    name: Anchor program (build + test)
+    runs-on: ubuntu-latest
+    env:
+      # Keep this in step with the anchor-lang version pinned in
+      # pixelvault/programs/pixelvault/Cargo.toml.
+      ANCHOR_VERSION: "1.2.0"
+    defaults:
+      run:
+        working-directory: pixelvault
+    steps:
+      - uses: actions/checkout@v4
+
+      # Picks up the toolchain pinned in pixelvault/rust-toolchain.toml.
+      - name: Install pinned Rust toolchain
+        run: rustup show
+
+      - name: Cache Solana CLI and Anchor CLI
+        id: cli-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/solana
+            ~/.cargo/bin/anchor
+          key: solana-anchor-${{ runner.os }}-${{ env.ANCHOR_VERSION }}
+
+      - name: Install Solana CLI
+        if: steps.cli-cache.outputs.cache-hit != 'true'
+        run: sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+
+      - name: Add Solana CLI to PATH
+        run: echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - name: Install Anchor CLI
+        if: steps.cli-cache.outputs.cache-hit != 'true'
+        run: cargo install --locked anchor-cli --version "$ANCHOR_VERSION"
+
+      - name: Cache cargo registry and target dir
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            pixelvault/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('pixelvault/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: anchor build
+        run: anchor build
+
+      - name: cargo test
+        run: cargo test
+
+  web:
+    name: Web (typecheck + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+
+  deploy-functions:
+    name: Deploy functions (install sanity check)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: deploy/racer
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: deploy/racer/package-lock.json
+
+      - run: npm ci

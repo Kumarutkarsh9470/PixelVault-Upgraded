@@ -1,5 +1,8 @@
 # PixelVault
 
+![CI](https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/actions/workflows/ci.yml/badge.svg)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 **In-game purchases you can refund.** Every item holds USDC that a Solana program, not the studio, guarantees the player can take back.
 
 Built for the Colosseum Crypto World's Fair hackathon (Solana track).
