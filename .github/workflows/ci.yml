@@ -54,8 +54,22 @@ jobs:
           restore-keys: |
             cargo-${{ runner.os }}-
 
+      # The deploy keypair isn't committed, so CI's generated one never matches declare_id!.
       - name: anchor build
-        run: anchor build
+        run: anchor build --ignore-keys
+
+      # The tests sign init_protocol as the hard-coded PROTOCOL_ADMIN.
+      - name: Write protocol admin keypair
+        env:
+          SOLANA_ADMIN_KEYPAIR: ${{ secrets.SOLANA_ADMIN_KEYPAIR }}
+        run: |
+          if [ -z "$SOLANA_ADMIN_KEYPAIR" ]; then
+            echo "::error::Repository secret SOLANA_ADMIN_KEYPAIR is not set (JSON byte array of the PROTOCOL_ADMIN keypair)."
+            exit 1
+          fi
+          mkdir -p ~/.config/solana
+          printf '%s' "$SOLANA_ADMIN_KEYPAIR" > ~/.config/solana/id.json
+          chmod 600 ~/.config/solana/id.json
 
       - name: cargo test
         run: cargo test
