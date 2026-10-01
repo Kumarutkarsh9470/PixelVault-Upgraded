@@ -1,18 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSignTransaction, useWallets } from "@privy-io/react-auth/solana";
-import { address, type Instruction } from "@solana/kit";
+import { address, isAddress, type Instruction } from "@solana/kit";
 import {
   compileSponsored,
   craftInstructions,
   redeemInstruction,
+  resolveUsdcAccount,
   routeInstructions,
+  usdcTransferInstruction,
   type SponsorQuote,
 } from "@pixelvault/sdk";
 
 import catalogData from "../data/catalog.json";
-import { api, type RunResult, type Session } from "../lib/api";
-import { balancesOf, chain, classConfig } from "../lib/program";
+import { api, formatUsdc, type RunResult, type Session } from "../lib/api";
+import { balancesOf, chain, classConfig, rpc } from "../lib/program";
+import { initData } from "../lib/telegram";
 import { SOLANA_CHAIN, SPONSOR_API } from "../config";
 import type { Loadout, RaceFinished } from "../lib/unity";
 
@@ -39,6 +42,7 @@ type GameState = {
   craft: (item: Item) => Promise<string>;
   redeem: (item: Item) => Promise<string>;
   route: (from: Item, to: Item) => Promise<string>;
+  withdraw: (to: string, amount: number) => Promise<string>;
   equip: (item: Item | null, type: "chassis" | "underglow" | "trail") => void;
   submitRun: (result: RaceFinished) => Promise<RunResult>;
   clearError: () => void;
@@ -124,7 +128,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const response = await fetch(SPONSOR_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transaction: btoa(binary) }),
+        body: JSON.stringify({ initData: initData(), transaction: btoa(binary) }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "transaction failed");
@@ -179,6 +183,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return sponsor((feePayer) =>
           routeInstructions(chain, { player: address(wallet!.address), rentPayer: address(feePayer), from, grant }),
         );
+      }),
+    [run, sponsor, wallet],
+  );
+
+  /** Sends USDC from the game wallet to any Solana wallet or USDC account. */
+  const withdraw = useCallback(
+    (to: string, amount: number) =>
+      run(`Withdrawing ${formatUsdc(amount)}`, async () => {
+        const target = to.trim();
+        if (!isAddress(target)) throw new Error("that is not a Solana address");
+        if (target === wallet!.address) throw new Error("that is this game wallet; enter the wallet you want to send to");
+        const destination = await resolveUsdcAccount(rpc, chain, target);
+        return sponsor(async () => [
+          await usdcTransferInstruction(chain, { owner: address(wallet!.address), destination, amount: BigInt(amount) }),
+        ]);
       }),
     [run, sponsor, wallet],
   );
@@ -239,6 +258,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     craft,
     redeem,
     route,
+    withdraw,
     equip,
     submitRun,
     clearError: () => setError(null),

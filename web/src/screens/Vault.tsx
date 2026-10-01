@@ -4,6 +4,7 @@ import { api, formatUsdc, type Stats } from "../lib/api";
 import { haptic } from "../lib/telegram";
 import { allItems, catalog, useGame, type Item } from "../state/game";
 import { Sheet, Stat } from "../components/ui";
+import { WalletPanel } from "../components/WalletPanel";
 
 const refundOf = (item: Item) => Math.floor((item.price * item.backingBps) / 10_000);
 const gameName = (gameId: number) => catalog.games.find((g) => g.gameId === gameId)?.name ?? `Game ${gameId}`;
@@ -111,6 +112,8 @@ export function Vault({ onBack }: { onBack: () => void }) {
 
         {busy && <p className="muted">{busy}…</p>}
         {error && <p className="error">{error}</p>}
+
+        <WalletPanel />
 
         {stats && (
           <div className="transparency">

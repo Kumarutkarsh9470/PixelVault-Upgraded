@@ -136,3 +136,6 @@ jobs:
           (cd deploy/racer && npm ci)
           node tools/sync-data.mjs
           node tools/check-api.mjs
+
+      - name: Relayer rule tests
+        run: node --test deploy/racer/test/*.test.mjs

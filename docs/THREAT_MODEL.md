@@ -47,11 +47,18 @@ PixelVault holds real USDC on behalf of players. This document lists what we pro
 
 ### On the relayer
 
+Rules are in `inspect` in `deploy/racer/api/sponsor.js`; the named tests are in `deploy/racer/test/sponsor.test.mjs` and run in CI. `tools/test-sponsor.mjs` repeats the main attacks against a live server on devnet.
+
 | Attack | Defence | Evidence |
 |---|---|---|
-| Drain the sponsor with a transfer | Only the PixelVault program, the Ed25519 precompile and SPL Memo may appear | `tools/test-sponsor.mjs` (drain attempt) |
-| Attach a large priority fee | The Compute Budget program is not allowed | `tools/test-sponsor.mjs` (priority-fee attempt) |
-| Use the sponsor as an account | The sponsor may appear only as `craft`'s rent payer (account index 1), identified by discriminator | `tools/test-sponsor.mjs` (sponsor-as-account attempt) |
+| Use the relayer anonymously | Every sponsored transaction needs Telegram launch data, verified like every other endpoint | `tools/test-sponsor.mjs` (no Telegram login) |
+| Pay for someone else's transactions | The only signer besides the sponsor must be the wallet linked to the caller's Telegram account | `refuses signers other than the caller's linked wallet` |
+| Drain the sponsor with a transfer | Only PixelVault, the Ed25519 precompile, SPL Memo and SPL Token may appear | `refuses draining the sponsor with a transfer` |
+| Attach a large priority fee | The Compute Budget program is not allowed | `refuses a priority fee the sponsor would pay` |
+| Use the sponsor as an account | The sponsor may appear only as `craft`'s rent payer (account index 1), identified by discriminator | `refuses the sponsor in any role but craft's rent payer` |
+| Have the sponsor pay for studio operations | Of PixelVault's instructions, only `craft` and `redeem` are sponsored | `refuses anything that is not craft or redeem in PixelVault` |
+| Abuse withdrawals | Only USDC `TransferChecked`, authorised by the caller's own wallet, at least $0.10, alone in its transaction; destinations must already have a USDC account, so the sponsor never pays rent for one | `withdrawals: USDC only, TransferChecked only, at least the minimum, on their own` |
+| Burn fees by spamming valid transactions | At most 20 sponsored transactions per wallet per 10 minutes and 150 per day, each recorded in `sponsored_txs` | `RATE_LIMITS` in `sponsor.js` |
 | Hide accounts in a lookup table | Address lookup tables are rejected | `deploy/racer/api/sponsor.js` |
 
 ### On the game backend

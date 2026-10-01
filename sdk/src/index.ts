@@ -6,3 +6,4 @@ export * from "./grant.ts";
 export * from "./instructions.ts";
 export * from "./server.ts";
 export * from "./transaction.ts";
+export * from "./wallet.ts";

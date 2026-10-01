@@ -38,7 +38,8 @@ You can check the claim yourself in about ninety seconds:
 | **Program** | [`AANvcGam…zNsuoZ`](https://explorer.solana.com/address/AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ?cluster=devnet) on devnet |
 | **Threat model** | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md): every attack we considered, its defence, and the test that proves it |
 | **Run locally** | `node tools/serve-web.mjs deploy/racer 8091` → http://localhost:8091 |
-| **Tests** | `anchor build && cargo test`: 12 program tests against litesvm, run in [CI](.github/workflows/ci.yml) on every push |
+| **Studio SDK** | [`sdk/`](sdk): sign grants, build craft/redeem/route transactions, cash out. [Integration guide](sdk/README.md) |
+| **Tests** | 12 program tests, SDK tests against the compiled program, relayer rule tests: all in [CI](.github/workflows/ci.yml) on every push |
 
 Built for the **Colosseum Crypto World's Fair** hackathon, Solana track.
 
@@ -108,6 +109,8 @@ One Telegram Mini App with a React shell around a Unity WebGL game. There are th
      one transaction, the old item burns and the new one appears.
 <img src="docs/media/route.gif" alt="Moving value from one game to another in one transaction" width="100%">
 -->
+
+**Cash out any time.** The Vault's wallet panel shows a deposit address and withdraws USDC to any Solana wallet or exchange address, fees paid by the relayer.
 
 **Value moves between games at par.** *Move to another game* redeems an item in one game and crafts one in another inside a single transaction, so the backing never leaves the protocol and the player pays only the difference. See [Honest limitations](#honest-limitations): the second game is not playable yet.
 
@@ -199,11 +202,12 @@ flowchart LR
 |---|---|
 | [`pixelvault/`](pixelvault) | Anchor program: protocol, game vaults, Token-2022 item classes, craft, redeem, raise backing; litesvm tests |
 | [`game/`](game) | Unity 6 racing game for WebGL: car physics, procedural tracks and scenery, ghosts, bloom, and a quality governor that drops effects on slow phones |
-| [`web/`](web) | React app around the game: Telegram login, Privy wallet, garage, vault, ranks, settings |
+| [`sdk/`](sdk) | `@pixelvault/sdk`: what a studio integrates. Grant signing, craft/redeem/route and USDC transfer instructions, balances, the exact price split. The racer uses it on both client and server |
+| [`web/`](web) | React app around the game: Telegram login, Privy wallet, garage, vault with deposit and withdraw, ranks, settings |
 | [`deploy/racer/`](deploy/racer) | Vercel deployment: the assembled builds plus API functions and the database schema |
 | [`tools/`](tools) | Devnet bootstrap, deploy assembly, DB migration, local server, relayer attack tests, track calibration |
 
-**A craft, end to end.** (1) The app asks `/api/grant` for a craft. The server verifies the Telegram login, reserves the recipe's materials and records the grant in one serializable statement, then signs a digest of program, game, class, player, sequence and expiry. (2) The app builds an Ed25519 verification instruction followed by `craft`, and the embedded wallet signs. (3) `/api/sponsor` refuses any transaction that touches a program other than PixelVault, Ed25519 or Memo, uses an address lookup table, or uses the sponsor for anything except `craft`'s rent payer. Then it co-signs and submits. (4) The program verifies the grant, moves the backing to the vault and the margin to the two treasuries, checks the caps and solvency, and mints one unit.
+**A craft, end to end.** (1) The app asks `/api/grant` for a craft. The server verifies the Telegram login, reserves the recipe's materials and records the grant in one serializable statement, then signs a digest of program, game, class, player, sequence and expiry. (2) The app builds an Ed25519 verification instruction followed by `craft`, and the embedded wallet signs. (3) `/api/sponsor` checks the Telegram login and that the only other signer is that player's wallet. It pays only for `craft`, `redeem` and USDC withdrawals, never lets the sponsor appear except as `craft`'s rent payer, refuses lookup tables and priority fees, and rate-limits each wallet. Then it co-signs and submits. (4) The program verifies the grant, moves the backing to the vault and the margin to the two treasuries, checks the caps and solvency, and mints one unit.
 
 ## The test suite, and what each test catches
 
@@ -224,7 +228,9 @@ flowchart LR
 | `per_player_cap_is_enforced` | The per-player launch cap |
 | `supply_cap_is_enforced` | Limited editions |
 
-The relayer has its own attack script, [`tools/test-sponsor.mjs`](tools/test-sponsor.mjs), run against a live server on devnet: it tries to drain the sponsor with a transfer, attach a priority fee, and use the sponsor as an ordinary account.
+**The SDK** (`cd sdk && npm test`) pins every byte it produces to vectors taken from the original racer code, then runs the full flow against the compiled program in litesvm: two studios, a zero-SOL player, craft, redeem, a cross-studio route, a withdrawal and a rejected replay.
+
+**The relayer** (`node --test deploy/racer/test/*.test.mjs`) has a test for each rule in its [threat model section](docs/THREAT_MODEL.md#on-the-relayer): no draining, no priority fees, no sponsor-as-account, no studio operations, no other people's wallets, and withdrawals limited to the player's own USDC. [`tools/test-sponsor.mjs`](tools/test-sponsor.mjs) repeats the main attacks against a live server on devnet.
 
 ## Reproducing
 
@@ -238,11 +244,17 @@ cargo test
 
 The workspace pins Rust 1.98.1 for host builds (tests and IDL). On-chain binaries are compiled by the Solana toolchain's own compiler.
 
+**SDK** (the web app and the API functions both use it):
+
+```bash
+cd sdk && npm ci && npm run build && npm test
+```
+
 **Devnet economy** (creates a mock USDC mint, the protocol, both games and every item class, then writes `web/src/data/chain.json`; safe to re-run):
 
 ```bash
 node tools/setup-devnet.mjs
-node tools/sync-data.mjs
+node tools/sync-data.mjs   # also copies sdk/dist into the API functions
 ```
 
 **Web app:**
@@ -267,7 +279,6 @@ node tools/serve-web.mjs deploy/racer 8091
 
 - **The second game is not playable yet.** Glyph Forge is registered on-chain as its own studio with its own vault and two item classes, but it has no gameplay, its items need no materials, and it shares the racer's grant signer and backend. Moving value between games works on-chain today; a real second game, run as an independent studio, is next.
 - **Gameplay is checked for plausibility, not replayed.** A skilled cheater who produces realistic checkpoint times can earn materials they didn't drive for. Every item is still paid for in USDC, so this cannot extract money.
-- **The relayer is not rate-limited yet.** It only signs safe PixelVault transactions, but it does not yet tie requests to a Telegram login or cap them per player.
 - **Devnet only.** USDC is a mock mint and the starter grant is minted from it. A mainnet build needs a new admin key in [`constants.rs`](pixelvault/programs/pixelvault/src/constants.rs), and the admin will move to a multisig.
 - **Not audited.** Launch caps (including $25 of backing per player per game) bound the loss from any undiscovered bug.
 

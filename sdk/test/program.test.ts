@@ -38,11 +38,13 @@ import {
   fetchNextGrantSeq,
   gamePda,
   redeemInstruction,
+  resolveUsdcAccount,
   routeInstructions,
   signGrant,
   SYSTEM_PROGRAM,
   TOKEN_2022_PROGRAM,
   TOKEN_PROGRAM,
+  usdcTransferInstruction,
   type Deployment,
   type GrantSigner,
 } from "../src/index.ts";
@@ -151,7 +153,9 @@ class World {
       getAccountInfo: (at: Address) => ({
         send: async () => {
           const acc = svm.getAccount(at);
-          return { value: acc.exists ? { data: [Buffer.from(acc.data).toString("base64"), "base64"] } : null };
+          return {
+            value: acc.exists ? { owner: acc.programAddress, data: [Buffer.from(acc.data).toString("base64"), "base64"] } : null,
+          };
         },
       }),
     } as unknown as Rpc<GetAccountInfoApi>;
@@ -289,6 +293,13 @@ test("zero-SOL player crafts and redeems through the SDK, sponsor paying", { ski
   assert.equal(await world.itemsOf(player, 1, 1), 0n);
   assert.equal(world.usdcOf(vault), 0n);
   assert.equal(world.usdcOf(playerUsdc), 4_800_000n);
+
+  // Cash out: the player sends USDC to another wallet's USDC account, sponsor paying the fee.
+  const elsewhere = address(world.deployment.games[2].treasury);
+  const destination = await resolveUsdcAccount(world.rpc(), world.deployment, elsewhere);
+  await world.ok(world.sponsor, [await usdcTransferInstruction(world.deployment, { owner: player, destination, amount: 800_000n })], [world.player]);
+  assert.equal(world.usdcOf(playerUsdc), 4n * USDC);
+  assert.equal(world.usdcOf(elsewhere), 800_000n);
   assert.equal(world.svm.getBalance(player) ?? 0n, 0n);
 });
 
