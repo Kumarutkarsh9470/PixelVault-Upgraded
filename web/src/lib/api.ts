@@ -40,6 +40,8 @@ export type LeaderGhost = {
 
 export type LeaderboardEntry = { rank: number; name: string; totalMs: number; at: string };
 
+const GRANT_ENDPOINTS: Record<number, string> = { 1: "/api/grant", 2: "/api/glyph/grant" };
+
 async function call<T>(path: string, body?: Record<string, unknown>): Promise<T> {
   const response = await fetch(path, {
     method: body ? "POST" : "GET",
@@ -64,7 +66,12 @@ export const api = {
     ghost: { interval: number; samples: number[] };
   }) =>
     call<RunResult>("/api/run", run),
-  grant: (wallet: string, gameId: number, classId: number) => call<Grant>("/api/grant", { wallet, gameId, classId }),
+  /** Each game's own server signs grants for its items: Neon Racer here, Glyph Forge under /api/glyph. */
+  grant: (wallet: string, gameId: number, classId: number) => {
+    const path = GRANT_ENDPOINTS[gameId];
+    if (!path) throw new Error(`no grant server for game ${gameId}`);
+    return call<Grant>(path, { wallet, gameId, classId });
+  },
   starter: (wallet: string) => call<{ signature: string | null; amount: number }>("/api/starter", { wallet }),
   leaderboard: (trackId: string) =>
     call<{ entries: LeaderboardEntry[] }>(`/api/leaderboard?track=${encodeURIComponent(trackId)}`),

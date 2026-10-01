@@ -6,7 +6,8 @@ import {
 } from "@solana/kit";
 
 import { associatedTokenAddress, TOKEN_2022_PROGRAM, TOKEN_PROGRAM } from "./accounts.ts";
-import type { Deployment } from "./deployment.ts";
+import { classDeployment, type Deployment } from "./deployment.ts";
+import type { ItemRef } from "./instructions.ts";
 
 export type Balances = {
   /** USDC in base units (6 decimals). */
@@ -37,4 +38,24 @@ export async function fetchBalances(
     items[info.mint] = Number(info.tokenAmount.amount);
   }
   return { usdc: usdc ? Number(usdc.value.amount) : 0, items };
+}
+
+/**
+ * How many units of one item a wallet holds, in a single RPC call. Any game can
+ * use this to honour another game's items: ownership lives on-chain, not in
+ * either studio's database.
+ */
+export async function itemBalance(
+  rpc: Rpc<GetTokenAccountBalanceApi>,
+  deployment: Deployment,
+  owner: string,
+  item: ItemRef,
+): Promise<number> {
+  const mint = address(classDeployment(deployment, item.gameId, item.classId).mint);
+  const account = await associatedTokenAddress(address(owner), mint, TOKEN_2022_PROGRAM);
+  const balance = await rpc
+    .getTokenAccountBalance(account)
+    .send()
+    .catch(() => null);
+  return balance ? Number(balance.value.amount) : 0;
 }

@@ -3,7 +3,10 @@
   "materials": [
     { "id": "neon-shard", "name": "Neon Shard", "track": "neon-harbor", "color": "#22d3ee" },
     { "id": "sun-glass", "name": "Sun Glass", "track": "dune-rush", "color": "#ff9f1c" },
-    { "id": "frost-core", "name": "Frost Core", "track": "frostline", "color": "#7dd3fc" }
+    { "id": "frost-core", "name": "Frost Core", "track": "frostline", "color": "#7dd3fc" },
+    { "id": "ember-rune", "name": "Ember Rune", "game": "glyph-forge", "color": "#fb7185" },
+    { "id": "tide-rune", "name": "Tide Rune", "game": "glyph-forge", "color": "#38bdf8" },
+    { "id": "storm-rune", "name": "Storm Rune", "game": "glyph-forge", "color": "#c084fc" }
   ],
   "medalRewards": { "bronze": 1, "silver": 2, "gold": 3 },
   "games": [
@@ -127,7 +130,7 @@
           "price": 500000,
           "backingBps": 8000,
           "maxSupply": 0,
-          "recipe": {}
+          "recipe": { "tide-rune": 12, "ember-rune": 8 }
         },
         {
           "classId": 2,
@@ -138,7 +141,51 @@
           "price": 900000,
           "backingBps": 9000,
           "maxSupply": 0,
-          "recipe": {}
+          "recipe": { "storm-rune": 10, "tide-rune": 10 }
+        },
+        {
+          "classId": 3,
+          "key": "frame-gilded",
+          "type": "frame",
+          "name": "Gilded Frame",
+          "value": "#facc15",
+          "price": 1000000,
+          "backingBps": 9500,
+          "maxSupply": 100,
+          "recipe": { "ember-rune": 15, "tide-rune": 15, "storm-rune": 15 }
+        },
+        {
+          "classId": 10,
+          "key": "aura-ember",
+          "type": "aura",
+          "name": "Ember Aura",
+          "value": "#fb7185",
+          "price": 300000,
+          "backingBps": 7000,
+          "maxSupply": 0,
+          "recipe": { "ember-rune": 15 }
+        },
+        {
+          "classId": 11,
+          "key": "aura-tide",
+          "type": "aura",
+          "name": "Tide Aura",
+          "value": "#38bdf8",
+          "price": 300000,
+          "backingBps": 7000,
+          "maxSupply": 0,
+          "recipe": { "tide-rune": 15 }
+        },
+        {
+          "classId": 12,
+          "key": "aura-storm",
+          "type": "aura",
+          "name": "Storm Aura",
+          "value": "#c084fc",
+          "price": 600000,
+          "backingBps": 8500,
+          "maxSupply": 0,
+          "recipe": { "storm-rune": 12 }
         }
       ]
     }

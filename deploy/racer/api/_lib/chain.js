@@ -3,11 +3,12 @@ import fs from "node:fs";
 import { Connection } from "@solana/web3.js";
 import { address, createSolanaRpc } from "@solana/kit";
 
-import { createGrantSigner, fetchNextGrantSeq, GRANT_TTL_SECONDS, signGrant } from "./sdk/index.js";
+import { createGrantSigner, fetchNextGrantSeq, GRANT_TTL_SECONDS, itemBalance, signGrant } from "./sdk/index.js";
 
 export { GRANT_TTL_SECONDS };
 
 const deployment = JSON.parse(fs.readFileSync(new URL("../../data/chain.json", import.meta.url)));
+const catalog = JSON.parse(fs.readFileSync(new URL("../../data/catalog.json", import.meta.url)));
 const rpcUrl = () => process.env.RPC_URL || deployment.rpc;
 
 let connection;
@@ -18,10 +19,26 @@ export function rpc() {
 }
 
 let kitRpc;
+const kit = () => (kitRpc ??= createSolanaRpc(rpcUrl()));
+
 /** The player's next unused grant sequence number in a game, read from the chain. */
 export function nextGrantSeq(gameId, wallet) {
-  kitRpc ??= createSolanaRpc(rpcUrl());
-  return fetchNextGrantSeq(kitRpc, deployment, gameId, address(wallet));
+  return fetchNextGrantSeq(kit(), deployment, gameId, address(wallet));
+}
+
+/**
+ * `key` if the wallet holds that frame on-chain, otherwise null. Frames are
+ * Glyph Forge items: the racer honours them by reading the chain, not by
+ * asking the other studio.
+ */
+export async function verifiedFrame(wallet, key) {
+  const item = catalog.games.flatMap((g) => g.items.map((i) => ({ ...i, gameId: g.gameId }))).find((i) => i.key === key && i.type === "frame");
+  if (!wallet || !item) return null;
+  try {
+    return (await itemBalance(kit(), deployment, wallet, item)) > 0 ? key : null;
+  } catch {
+    return null;
+  }
 }
 
 let signer;

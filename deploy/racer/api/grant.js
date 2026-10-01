@@ -8,11 +8,17 @@ import { HttpError, readBody, route } from "./_lib/http.js";
 import { reconcileGrants, upsertPlayer } from "./_lib/players.js";
 import { verifyInitData } from "./_lib/telegram.js";
 
+const RACER_GAME_ID = 1;
+
 export default route(["POST"], async (req) => {
   const body = readBody(req);
   const user = verifyInitData(body.initData);
   const gameId = Number(body.gameId);
   const classId = Number(body.classId);
+  // Each studio signs only for its own game; Glyph Forge grants come from /api/glyph/grant.
+  if (gameId !== RACER_GAME_ID) {
+    throw new HttpError(400, "this server only grants Neon Racer items");
+  }
   const { item } = findItem(gameId, classId);
 
   const player = await upsertPlayer(user, body.wallet);

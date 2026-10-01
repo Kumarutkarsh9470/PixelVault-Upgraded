@@ -72,3 +72,57 @@ create table if not exists sponsored_txs (
   created_at timestamptz not null default now()
 );
 create index if not exists sponsored_by_wallet on sponsored_txs (wallet, created_at desc);
+
+-- v3: Glyph Forge (game 2), run as a separate studio. It keeps its own
+-- players, runes, runs and grants, and signs with its own grant key.
+create table if not exists glyph_players (
+  telegram_id  bigint primary key,
+  name         text,
+  wallet       text,
+  best_mm      int not null default 0,
+  created_at   timestamptz not null default now(),
+  last_seen_at timestamptz not null default now()
+);
+
+create table if not exists glyph_materials (
+  telegram_id bigint not null references glyph_players (telegram_id),
+  material    text   not null,
+  amount      int    not null default 0 check (amount >= 0),
+  primary key (telegram_id, material)
+);
+
+-- One row per started run. The seed is issued here; the run is replayed from
+-- its inputs when submitted, and finished_at makes submission single-use.
+create table if not exists glyph_runs (
+  id              bigserial primary key,
+  telegram_id     bigint  not null references glyph_players (telegram_id),
+  seed            bigint  not null,
+  started_at      timestamptz not null default now(),
+  finished_at     timestamptz,
+  end_tick        int,
+  client_end_tick int,
+  distance_mm     int,
+  died            boolean,
+  runes           int,
+  reward          int not null default 0,
+  reject_reason   text
+);
+create index if not exists glyph_runs_by_player on glyph_runs (telegram_id, started_at desc);
+
+create table if not exists glyph_grants (
+  id          bigserial primary key,
+  telegram_id bigint  not null references glyph_players (telegram_id),
+  wallet      text    not null,
+  class_id    int     not null,
+  seq         bigint  not null,
+  expires_at  bigint  not null,
+  recipe      jsonb   not null,
+  status      text    not null default 'issued' check (status in ('issued', 'used', 'refunded')),
+  created_at  timestamptz not null default now()
+);
+create index if not exists glyph_grants_open on glyph_grants (telegram_id) where status = 'issued';
+
+-- The frame (a Glyph Forge item) each player shows on leaderboards. Each game
+-- checks ownership on-chain itself before storing it.
+alter table glyph_players add column if not exists frame text;
+alter table players add column if not exists frame text;

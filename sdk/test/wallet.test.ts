@@ -2,10 +2,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { address, generateKeyPairSigner, type Address, type GetAccountInfoApi, type Rpc } from "@solana/kit";
+import { address, generateKeyPairSigner, type Address, type GetAccountInfoApi, type GetTokenAccountBalanceApi, type Rpc } from "@solana/kit";
 import { findAssociatedTokenPda, getTransferCheckedInstruction, TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 
-import { addressBytes, associatedTokenAddress, resolveUsdcAccount, TOKEN_PROGRAM, usdcTransferInstruction, type Deployment } from "../src/index.ts";
+import {
+  addressBytes,
+  associatedTokenAddress,
+  itemBalance,
+  resolveUsdcAccount,
+  TOKEN_2022_PROGRAM,
+  TOKEN_PROGRAM,
+  usdcTransferInstruction,
+  type Deployment,
+} from "../src/index.ts";
 
 const deployment: Deployment = JSON.parse(readFileSync(new URL("./fixtures.json", import.meta.url), "utf8")).deployment;
 const usdc = address(deployment.usdcMint);
@@ -57,4 +66,20 @@ test("refuses wallets without a USDC account and token accounts for other mints"
   const rpc = fakeRpc({ [otherMintAccount]: tokenAccount((await generateKeyPairSigner()).address) });
   await assert.rejects(resolveUsdcAccount(rpc, deployment, wallet), /no USDC account/);
   await assert.rejects(resolveUsdcAccount(rpc, deployment, otherMintAccount), /other than USDC/);
+});
+
+test("itemBalance reads one item's associated account, and is zero when it does not exist", async () => {
+  const owner = (await generateKeyPairSigner()).address;
+  const mint = address(deployment.games["2"].classes["1"].mint);
+  const held = await associatedTokenAddress(owner, mint, TOKEN_2022_PROGRAM);
+  const rpc = {
+    getTokenAccountBalance: (at: Address) => ({
+      send: async () => {
+        if (at !== held) throw new Error("could not find account");
+        return { value: { amount: "3" } };
+      },
+    }),
+  } as unknown as Rpc<GetTokenAccountBalanceApi>;
+  assert.equal(await itemBalance(rpc, deployment, owner, { gameId: 2, classId: 1 }), 3);
+  assert.equal(await itemBalance(rpc, deployment, owner, { gameId: 2, classId: 2 }), 0);
 });

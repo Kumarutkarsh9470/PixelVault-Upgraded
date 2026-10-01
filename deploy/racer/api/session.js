@@ -4,12 +4,16 @@ import { readBody, route } from "./_lib/http.js";
 import { bestTimesOf, materialsOf, reconcileGrants, upsertPlayer } from "./_lib/players.js";
 import { verifyInitData } from "./_lib/telegram.js";
 import { sql } from "./_lib/db.js";
+import { verifiedFrame } from "./_lib/chain.js";
 
 export default route(["POST"], async (req) => {
   const body = readBody(req);
   const user = verifyInitData(body.initData);
   const player = await upsertPlayer(user, body.wallet);
   await reconcileGrants(user.id);
+  if (body.frame !== undefined) {
+    await sql()`update players set frame = ${await verifiedFrame(player.wallet, body.frame)} where telegram_id = ${user.id}`;
+  }
 
   const [materials, bests, open] = await Promise.all([
     materialsOf(user.id),

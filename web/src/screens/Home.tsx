@@ -54,7 +54,7 @@ export function Home({
       </header>
 
       <div className="materials-row">
-        {catalog.materials.map((m) => (
+        {catalog.materials.filter((m) => "track" in m).map((m) => (
           <MaterialChip key={m.id} id={m.id} amount={session?.materials[m.id] ?? 0} />
         ))}
       </div>
