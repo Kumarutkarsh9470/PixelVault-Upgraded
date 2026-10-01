@@ -139,3 +139,15 @@ jobs:
 
       - name: Relayer rule tests
         run: node --test deploy/racer/test/*.test.mjs
+
+  glyph-rules:
+    name: Glyph Forge rules (C# matches server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Mono
+        run: sudo apt-get update -q && sudo apt-get install -y -q mono-mcs mono-runtime
+
+      - name: Check the Unity runner simulation against the server's vectors
+        run: tools/glyph-verify.sh
