@@ -1,0 +1,5 @@
+<!-- Payload classes are filled by JsonUtility via reflection; keep the game
+     assembly intact so high managed stripping cannot remove their fields. -->
+<linker>
+  <assembly fullname="Assembly-CSharp" preserve="all" />
+</linker>

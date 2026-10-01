@@ -131,24 +131,25 @@ public sealed class RunnerSim
     public bool Airborne => Tick < AirUntil;
     public bool Sliding => Tick < SlideUntil;
 
-    /// Applies an input at the current tick, before Step().
-    public void Input(int action)
+    /// Applies an input at the current tick, before Step(). Returns false when it
+    /// changes nothing (a lane change off the edge, a jump while airborne), so the
+    /// client need not record it; replaying it would change nothing either.
+    public bool Input(int action)
     {
         int tick = Tick;
         if (action == Left || action == Right)
         {
             int target = (PendingLane >= 0 ? PendingLane : Lane) + (action == Left ? -1 : 1);
-            if (target >= 0 && target <= 2)
-            {
-                PendingLane = target;
-                pendingAt = tick + LaneDelay;
-            }
+            if (target < 0 || target > 2) return false;
+            PendingLane = target;
+            pendingAt = tick + LaneDelay;
+            return true;
         }
-        else if (tick >= AirUntil && tick >= SlideUntil)
-        {
-            if (action == Jump) AirUntil = tick + JumpTicks;
-            else if (action == Slide) SlideUntil = tick + SlideTicks;
-        }
+        if (tick < AirUntil || tick < SlideUntil) return false;
+        if (action == Jump) AirUntil = tick + JumpTicks;
+        else if (action == Slide) SlideUntil = tick + SlideTicks;
+        else return false;
+        return true;
     }
 
     /// Advances one tick: settles lane changes, moves forward, resolves every row crossed.

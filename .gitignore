@@ -25,6 +25,17 @@ game/*.sln
 game/.vs/
 game-*.log
 
+# Glyph Forge Unity project
+glyph/game/[Ll]ibrary/
+glyph/game/[Tt]emp/
+glyph/game/[Oo]bj/
+glyph/game/[Ll]ogs/
+glyph/game/[Bb]uilds/
+glyph/game/[Uu]ser[Ss]ettings/
+glyph/game/*.csproj
+glyph/game/*.sln
+glyph/game/.vs/
+
 # Vercel
 deploy/racer/.vercel/
 
@@ -34,3 +45,6 @@ deploy/racer/data/*.json.bak
 deploy/racer/index.html
 deploy/racer/assets/
 deploy/racer/api/_lib/sdk/
+
+# Tool downloads
+.cache/

@@ -141,13 +141,21 @@ jobs:
         run: node --test deploy/racer/test/*.test.mjs
 
   glyph-rules:
-    name: Glyph Forge rules (C# matches server)
+    name: Glyph Forge (C# rules match server, scripts compile)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Mono
-        run: sudo apt-get update -q && sudo apt-get install -y -q mono-mcs mono-runtime
+        run: sudo apt-get update -q && sudo apt-get install -y -q mono-devel
 
       - name: Check the Unity runner simulation against the server's vectors
         run: tools/glyph-verify.sh
+
+      - uses: actions/cache@v4
+        with:
+          path: .cache/unity-typecheck
+          key: unity-typecheck-v1
+
+      - name: Compile the runner's scripts against Unity's API
+        run: tools/unity-typecheck.sh glyph/game
