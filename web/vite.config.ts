@@ -7,6 +7,8 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "/",
   plugins: [react()],
+  // The SDK is linked from ../sdk with its own node_modules; bundle one copy of kit.
+  resolve: { dedupe: ["@solana/kit"] },
   build: {
     outDir: "../deploy/racer",
     emptyOutDir: false,

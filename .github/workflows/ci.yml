@@ -94,9 +94,6 @@ jobs:
   web:
     name: Web (typecheck + build)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v4
 
@@ -104,17 +101,21 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            sdk/package-lock.json
+            web/package-lock.json
 
-      - run: npm ci
-      - run: npm run build
+      - name: Build SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+
+      - name: Build web app
+        working-directory: web
+        run: npm ci && npm run build
 
   deploy-functions:
-    name: Deploy functions (install sanity check)
+    name: Deploy functions (install + import check)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: deploy/racer
     steps:
       - uses: actions/checkout@v4
 
@@ -122,6 +123,16 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: deploy/racer/package-lock.json
+          cache-dependency-path: |
+            sdk/package-lock.json
+            deploy/racer/package-lock.json
 
-      - run: npm ci
+      - name: Build SDK
+        working-directory: sdk
+        run: npm ci && npm run build
+
+      - name: Install, sync and import every API module
+        run: |
+          (cd deploy/racer && npm ci)
+          node tools/sync-data.mjs
+          node tools/check-api.mjs

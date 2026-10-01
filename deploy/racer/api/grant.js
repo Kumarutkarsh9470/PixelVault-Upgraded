@@ -1,7 +1,7 @@
 // Issues a signed material grant authorising one craft. Materials are
 // reserved atomically; they are spent once the craft lands on-chain, or
 // refunded if the grant expires unused (see reconcileGrants).
-import { GRANT_TTL_SECONDS, grantMessage, nextGrantSeq, signGrant } from "./_lib/chain.js";
+import { GRANT_TTL_SECONDS, issueGrant, nextGrantSeq } from "./_lib/chain.js";
 import { sql } from "./_lib/db.js";
 import { findItem } from "./_lib/game.js";
 import { HttpError, readBody, route } from "./_lib/http.js";
@@ -67,16 +67,7 @@ export default route(["POST"], async (req) => {
   return respond(gameId, classId, player.wallet, seq, expiresAt, item);
 });
 
-function respond(gameId, classId, wallet, seq, expiresAt, item) {
-  const { signer, signature } = signGrant(grantMessage(gameId, classId, wallet, seq, expiresAt));
-  return {
-    gameId,
-    classId,
-    seq: seq.toString(),
-    expiresAt,
-    signer,
-    signature,
-    price: item.price,
-    backingBps: item.backingBps,
-  };
+async function respond(gameId, classId, wallet, seq, expiresAt, item) {
+  const grant = await issueGrant(gameId, classId, wallet, seq, expiresAt);
+  return { ...grant, price: item.price, backingBps: item.backingBps };
 }

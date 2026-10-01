@@ -33,3 +33,4 @@ deploy/racer/Build/
 deploy/racer/data/*.json.bak
 deploy/racer/index.html
 deploy/racer/assets/
+deploy/racer/api/_lib/sdk/

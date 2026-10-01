@@ -2,10 +2,17 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { usePrivy } from "@privy-io/react-auth";
 import { useSignTransaction, useWallets } from "@privy-io/react-auth/solana";
 import { address, type Instruction } from "@solana/kit";
+import {
+  compileSponsored,
+  craftInstructions,
+  redeemInstruction,
+  routeInstructions,
+  type SponsorQuote,
+} from "@pixelvault/sdk";
 
 import catalogData from "../data/catalog.json";
 import { api, type RunResult, type Session } from "../lib/api";
-import { balancesOf, classConfig, compileSponsored, craftInstructions, redeemInstruction, type Quote } from "../lib/program";
+import { balancesOf, chain, classConfig } from "../lib/program";
 import { SOLANA_CHAIN, SPONSOR_API } from "../config";
 import type { Loadout, RaceFinished } from "../lib/unity";
 
@@ -103,7 +110,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const sponsor = useCallback(
     async (build: (feePayer: string) => Promise<Instruction[]>) => {
       if (!wallet) throw new Error("wallet not ready");
-      const quote: Quote = await fetch(SPONSOR_API).then((r) => r.json());
+      const quote: SponsorQuote = await fetch(SPONSOR_API).then((r) => r.json());
       const instructions = await build(quote.feePayer);
       const unsigned = compileSponsored(instructions, quote);
       const { signedTransaction } = await signTransaction({
@@ -149,7 +156,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (item: Item) =>
       run(`Crafting ${item.name}`, async () => {
         const grant = await api.grant(wallet!.address, item.gameId, item.classId);
-        return sponsor((feePayer) => craftInstructions(address(wallet!.address), address(feePayer), grant));
+        return sponsor((feePayer) =>
+          craftInstructions(chain, { player: address(wallet!.address), rentPayer: address(feePayer), grant }),
+        );
       }),
     [run, sponsor, wallet],
   );
@@ -157,7 +166,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const redeem = useCallback(
     (item: Item) =>
       run(`Redeeming ${item.name}`, () =>
-        sponsor(async () => [await redeemInstruction(address(wallet!.address), item.gameId, item.classId)]),
+        sponsor(async () => [await redeemInstruction(chain, address(wallet!.address), item)]),
       ),
     [run, sponsor, wallet],
   );
@@ -167,10 +176,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (from: Item, to: Item) =>
       run(`Moving ${from.name} to ${to.name}`, async () => {
         const grant = await api.grant(wallet!.address, to.gameId, to.classId);
-        return sponsor(async (feePayer) => [
-          await redeemInstruction(address(wallet!.address), from.gameId, from.classId),
-          ...(await craftInstructions(address(wallet!.address), address(feePayer), grant)),
-        ]);
+        return sponsor((feePayer) =>
+          routeInstructions(chain, { player: address(wallet!.address), rentPayer: address(feePayer), from, grant }),
+        );
       }),
     [run, sponsor, wallet],
   );
