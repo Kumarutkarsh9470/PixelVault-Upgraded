@@ -6,6 +6,7 @@ secrets/
 # Node
 node_modules/
 web/dist/
+sdk/dist/
 
 # Anchor / Rust
 pixelvault/target/

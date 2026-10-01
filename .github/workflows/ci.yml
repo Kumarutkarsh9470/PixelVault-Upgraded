@@ -74,6 +74,23 @@ jobs:
       - name: cargo test
         run: cargo test
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: sdk/package-lock.json
+
+      # The SDK's end-to-end tests run against the program built above.
+      - name: SDK typecheck, tests and build
+        working-directory: sdk
+        env:
+          PIXELVAULT_REQUIRE_PROGRAM: "1"
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
   web:
     name: Web (typecheck + build)
     runs-on: ubuntu-latest
