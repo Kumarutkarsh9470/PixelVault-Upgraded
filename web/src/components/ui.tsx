@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { catalog } from "../state/game";
+import { catalog } from "../state/catalog";
 import type { Medal } from "../lib/api";
 
 export function MaterialChip({ id, amount, need }: { id: string; amount: number; need?: number }) {

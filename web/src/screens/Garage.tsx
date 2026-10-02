@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { formatUsdc } from "../lib/api";
 import { haptic } from "../lib/telegram";
 import { sendToUnity } from "../lib/unity";
-import { allItems, useGame, type Item } from "../state/game";
+import { allItems, type Item } from "../state/catalog";
+import { useGame } from "../state/game";
+import { useWallet } from "../state/wallet";
 import { MaterialChip, Sheet } from "../components/ui";
 
 const TABS = [
@@ -16,7 +18,8 @@ type Slot = (typeof TABS)[number]["type"];
 
 /** Browse cosmetics on your car in 3D, craft them, and equip what you own. */
 export function Garage({ onBack }: { onBack: () => void }) {
-  const { session, balances, loadout, owned, craft, equip, busy, error } = useGame();
+  const { session, loadout, equip } = useGame();
+  const { balances, owned, craft, busy, error } = useWallet();
   const [tab, setTab] = useState<Slot>("chassis");
   const [preview, setPreview] = useState<Item | null>(null);
 

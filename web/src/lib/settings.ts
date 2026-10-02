@@ -44,3 +44,25 @@ export const settings = {
 export function useSettings(): Settings {
   return useSyncExternalStore(settings.subscribe, settings.get);
 }
+
+const FRAME_KEY = "pv_frame";
+
+/**
+ * The Glyph Forge frame this player shows on both games' leaderboards. Only a
+ * preference: each game's server checks on-chain ownership before showing it.
+ */
+export function savedFrame(): string {
+  try {
+    return localStorage.getItem(FRAME_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveFrame(key: string) {
+  try {
+    localStorage.setItem(FRAME_KEY, key);
+  } catch {
+    // Not remembered across sessions; it still applies now.
+  }
+}

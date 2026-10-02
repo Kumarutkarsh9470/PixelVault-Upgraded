@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -13,5 +14,12 @@ export default defineConfig({
     outDir: "../deploy/racer",
     emptyOutDir: false,
     assetsDir: "assets",
+    // Two pages of one Mini App: Neon Racer (index.html) and Glyph Forge (glyph.html).
+    rollupOptions: {
+      input: {
+        racer: fileURLToPath(new URL("index.html", import.meta.url)),
+        glyph: fileURLToPath(new URL("glyph.html", import.meta.url)),
+      },
+    },
   },
 });

@@ -1,7 +1,9 @@
 import tracksData from "../data/tracks.json";
 import { formatTime, formatUsdc } from "../lib/api";
 import type { Opponent, OpponentKind } from "../lib/opponents";
-import { catalog, useGame } from "../state/game";
+import { catalog } from "../state/catalog";
+import { useGame } from "../state/game";
+import { useWallet } from "../state/wallet";
 import { MaterialChip, MedalBadge } from "../components/ui";
 
 export const tracks = tracksData.tracks;
@@ -34,7 +36,8 @@ export function Home({
   onOpponent: (kind: OpponentKind) => void;
   onSettings: () => void;
 }) {
-  const { session, balances } = useGame();
+  const { session } = useGame();
+  const { balances } = useWallet();
   const track = tracks.find((t) => t.id === trackId) ?? tracks[0];
   const best = session?.bests[track.id];
   const material = catalog.materials.find((m) => m.track === track.id)!;
@@ -116,6 +119,13 @@ export function Home({
         <button className="primary big" onClick={onRace}>
           Race
         </button>
+        <a className="game-switch" href="/glyph.html">
+          <span>
+            <b>Glyph Forge</b>
+            <small className="muted">Another studio's runner. Same wallet, same vault: move items between games.</small>
+          </span>
+          <span aria-hidden>→</span>
+        </a>
       </section>
     </div>
   );

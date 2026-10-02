@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-import { loadUnity } from "../lib/unity";
+import { loadUnity, type UnityBridge } from "../lib/unity";
 
 /** The game canvas, mounted once and kept behind every screen. */
-export function UnityStage({ onReady }: { onReady: () => void }) {
+export function UnityStage({ onReady, load = loadUnity }: { onReady: () => void; load?: UnityBridge["load"] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [progress, setProgress] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -11,13 +11,13 @@ export function UnityStage({ onReady }: { onReady: () => void }) {
 
   useEffect(() => {
     if (!canvas.current) return;
-    loadUnity(canvas.current, setProgress)
+    load(canvas.current, setProgress)
       .then(() => {
         setLoaded(true);
         onReady();
       })
       .catch((e) => setFailed(e.message));
-  }, [onReady]);
+  }, [onReady, load]);
 
   return (
     <>

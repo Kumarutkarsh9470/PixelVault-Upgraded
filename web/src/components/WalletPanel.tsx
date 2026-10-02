@@ -3,7 +3,7 @@ import { useState } from "react";
 import { formatUsdc } from "../lib/api";
 import { chain } from "../lib/program";
 import { haptic } from "../lib/telegram";
-import { useGame } from "../state/game";
+import { useWallet } from "../state/wallet";
 
 /** Mirrors MIN_WITHDRAW in deploy/racer/api/sponsor.js. */
 const MIN_WITHDRAW = 100_000;
@@ -17,7 +17,7 @@ function parseUsdc(text: string): number | null {
 
 /** Getting USDC into the game wallet, and out to any Solana wallet. */
 export function WalletPanel() {
-  const { wallet, balances, withdraw, busy } = useGame();
+  const { wallet, balances, withdraw, busy } = useWallet();
   const [mode, setMode] = useState<"deposit" | "withdraw" | null>(null);
   const [copied, setCopied] = useState(false);
   const [to, setTo] = useState("");

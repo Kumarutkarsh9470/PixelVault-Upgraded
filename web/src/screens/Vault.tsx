@@ -2,16 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api, formatUsdc, type Stats } from "../lib/api";
 import { haptic } from "../lib/telegram";
-import { allItems, catalog, useGame, type Item } from "../state/game";
+import { allItems, gameName, refundOf, type Item } from "../state/catalog";
+import { useWallet } from "../state/wallet";
+import { isDeployed } from "../lib/program";
 import { Sheet, Stat } from "../components/ui";
 import { WalletPanel } from "../components/WalletPanel";
 
-const refundOf = (item: Item) => Math.floor((item.price * item.backingBps) / 10_000);
-const gameName = (gameId: number) => catalog.games.find((g) => g.gameId === gameId)?.name ?? `Game ${gameId}`;
 
 /** Everything the player owns, what it is worth, and the exits: redeem or move value to another game. */
 export function Vault({ onBack }: { onBack: () => void }) {
-  const { balances, owned, redeem, route, busy, error } = useGame();
+  const { balances, owned, redeem, route, busy, error } = useWallet();
   const [routing, setRouting] = useState<Item | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const loaded = useRef(false);
@@ -27,7 +27,7 @@ export function Vault({ onBack }: { onBack: () => void }) {
 
   const holdings = useMemo(() => allItems.filter((i) => owned(i) > 0), [owned]);
   const refundable = holdings.reduce((sum, i) => sum + refundOf(i) * owned(i), 0);
-  const destinations = allItems.filter((i) => routing && i.gameId !== routing.gameId);
+  const destinations = allItems.filter((i) => routing && i.gameId !== routing.gameId && isDeployed(i.gameId, i.classId));
 
   const act = async (task: () => Promise<unknown>) => {
     try {

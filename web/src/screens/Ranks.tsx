@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api, formatTime, type LeaderboardEntry } from "../lib/api";
+import { Nameplate } from "../components/Nameplate";
 import { Sheet } from "../components/ui";
 import { tracks } from "./Home";
 
@@ -39,7 +40,7 @@ export function Ranks({ onBack }: { onBack: () => void }) {
           {entries?.map((e) => (
             <li key={e.rank}>
               <span className="rank">{e.rank}</span>
-              <span className="name">{e.name}</span>
+              <Nameplate name={e.name} frame={e.frame} />
               <span className="time">{formatTime(e.totalMs)}</span>
             </li>
           ))}

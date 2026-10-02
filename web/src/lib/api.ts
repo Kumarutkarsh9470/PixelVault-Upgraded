@@ -38,11 +38,11 @@ export type LeaderGhost = {
   ghost: { interval: number; samples: number[] };
 };
 
-export type LeaderboardEntry = { rank: number; name: string; totalMs: number; at: string };
+export type LeaderboardEntry = { rank: number; name: string; frame: string | null; totalMs: number; at: string };
 
 const GRANT_ENDPOINTS: Record<number, string> = { 1: "/api/grant", 2: "/api/glyph/grant" };
 
-async function call<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+export async function call<T>(path: string, body?: Record<string, unknown>): Promise<T> {
   const response = await fetch(path, {
     method: body ? "POST" : "GET",
     headers: body ? { "Content-Type": "application/json" } : undefined,
@@ -56,7 +56,7 @@ async function call<T>(path: string, body?: Record<string, unknown>): Promise<T>
 }
 
 export const api = {
-  session: (wallet?: string) => call<Session>("/api/session", { wallet }),
+  session: (wallet?: string, frame?: string) => call<Session>("/api/session", { wallet, frame }),
   submitRun: (run: {
     trackId: string;
     totalMs: number;
