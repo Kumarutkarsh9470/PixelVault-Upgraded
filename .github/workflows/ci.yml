@@ -155,7 +155,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .cache/unity-typecheck
-          key: unity-typecheck-v1
+          key: unity-typecheck-v2
 
       - name: Compile the runner's scripts against Unity's API
         run: tools/unity-typecheck.sh glyph/game

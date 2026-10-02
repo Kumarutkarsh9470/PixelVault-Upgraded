@@ -20,6 +20,8 @@ fetch() { # <package id> <version>
   if [ ! -d "$dir" ]; then
     curl -sSfL "https://api.nuget.org/v3-flatcontainer/$1/$2/$1.$2.nupkg" -o "$cache/pkg.zip"
     mkdir -p "$dir" && (cd "$dir" && unzip -q "$cache/pkg.zip") && rm "$cache/pkg.zip"
+    # NuGet archives can store files without read permission for non-root users.
+    chmod -R u+rwX "$dir"
   fi
   echo "$dir"
 }
