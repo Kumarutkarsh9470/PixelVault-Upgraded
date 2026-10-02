@@ -14,7 +14,9 @@ import {
   compileTransaction,
   createKeyPairSignerFromBytes,
   createTransactionMessage,
+  generateKeyPair,
   generateKeyPairSigner,
+  getAddressFromPublicKey,
   getAddressEncoder,
   getProgramDerivedAddress,
   lamports,
@@ -46,6 +48,7 @@ import {
   TOKEN_PROGRAM,
   usdcTransferInstruction,
   type Deployment,
+  type Grant,
   type GrantSigner,
 } from "../src/index.ts";
 
@@ -88,6 +91,7 @@ const discriminator = (name: string) => new Uint8Array(createHash("sha256").upda
 const w = (a: Address) => ({ address: a, role: AccountRole.WRITABLE });
 const r = (a: Address) => ({ address: a, role: AccountRole.READONLY });
 const ws = (a: Address) => ({ address: a, role: AccountRole.WRITABLE_SIGNER });
+const rs = (a: Address) => ({ address: a, role: AccountRole.READONLY_SIGNER });
 
 class World {
   svm = new LiteSVM();
@@ -97,6 +101,7 @@ class World {
   sponsor!: KeyPairSigner;
   player!: KeyPairSigner;
   usdcMint!: Address;
+  readonly studios: Record<number, KeyPairSigner> = {};
 
   async send(feePayer: KeyPairSigner, instructions: Instruction[], signers: KeyPairSigner[] = []) {
     const message = pipe(
@@ -163,6 +168,7 @@ class World {
 
   async registerGame(gameId: number, name: string, classes: { classId: number; price: bigint; backingBps: number }[]) {
     const studio = await generateKeyPairSigner();
+    this.studios[gameId] = studio;
     this.svm.airdrop(studio.address, lamports(10_000_000_000n));
     const game = await gamePda(PROGRAM_ID, gameId);
     const vault = await associatedTokenAddress(game, this.usdcMint, TOKEN_PROGRAM);
@@ -332,4 +338,32 @@ test("a replayed SDK grant is rejected with GrantAlreadyUsed", { skip }, async (
   const replay = await craft(world, 1, 1, 0n);
   assert.ok(replay instanceof FailedTransactionMetadata, "replay should fail");
   assert.match(replay.meta().logs().join("\n"), /GrantAlreadyUsed/);
+});
+
+test("a studio rotates its grant signer with update_game, and the old key's grants stop working", { skip }, async () => {
+  const world = await setup();
+  const player = world.player.address;
+  const studio = world.studios[2];
+  const game = address(world.deployment.games[2].game);
+  const keys = await generateKeyPair();
+  const fresh: GrantSigner = { address: await getAddressFromPublicKey(keys.publicKey), keys };
+
+  // update_game(crafting_paused: None, grant_signer: Some(fresh), backed_cap: None), as tools/setup-devnet.mjs sends it.
+  await world.ok(studio, [
+    {
+      programAddress: PROGRAM_ID,
+      accounts: [rs(studio.address), w(game)],
+      data: concat(discriminator("update_game"), Uint8Array.of(0, 1), addressBytes(fresh.address), Uint8Array.of(0)),
+    },
+  ]);
+
+  const stale = await craft(world, 2, 1);
+  assert.ok(stale instanceof FailedTransactionMetadata, "a grant from the old signer should fail");
+  assert.match(stale.meta().logs().join("\n"), /InvalidGrant/);
+  world.svm.expireBlockhash();
+
+  const seq = await fetchNextGrantSeq(world.rpc(), world.deployment, 2, player);
+  const grant: Grant = await signGrant(world.deployment, fresh, { gameId: 2, classId: 1, player, seq });
+  await world.ok(world.sponsor, await craftInstructions(world.deployment, { player, rentPayer: world.sponsor.address, grant }), [world.player]);
+  assert.equal(await world.itemsOf(player, 2, 1), 1n);
 });

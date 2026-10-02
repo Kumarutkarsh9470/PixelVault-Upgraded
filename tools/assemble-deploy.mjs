@@ -1,7 +1,8 @@
 // Assembles deploy/racer for a Vercel release:
-//   1. Unity's Build/ output (only the engine files; the app provides the page)
-//   2. the web app (index.html + assets/)
-//   3. shared data (tracks, catalogue, chain addresses) for the API functions
+//   1. both Unity builds' Build/ output (only the engine files; the app provides
+//      the pages): Neon Racer at /Build, Glyph Forge at /glyph/Build
+//   2. the web app (index.html, glyph.html, assets/)
+//   3. shared data (tracks, catalogue, chain addresses) and the SDK for the API functions
 // Then deploy with: cd deploy/racer && npx vercel --prod
 // Usage: node tools/assemble-deploy.mjs
 import { execSync } from "node:child_process";
@@ -18,7 +19,16 @@ if (!fs.existsSync(unityBuild)) {
 
 fs.rmSync(new URL("Build/", deploy), { recursive: true, force: true });
 fs.cpSync(unityBuild, new URL("Build/", deploy), { recursive: true });
-console.log("copied Unity build");
+console.log("copied Neon Racer build");
+
+const glyphBuild = new URL("glyph/game/Builds/WebGL/Build/", root);
+fs.rmSync(new URL("glyph/Build/", deploy), { recursive: true, force: true });
+if (fs.existsSync(glyphBuild)) {
+  fs.cpSync(glyphBuild, new URL("glyph/Build/", deploy), { recursive: true });
+  console.log("copied Glyph Forge build");
+} else {
+  console.warn("No Glyph Forge build at glyph/game/Builds/WebGL/Build; /glyph.html will not load its game");
+}
 
 fs.rmSync(new URL("assets/", deploy), { recursive: true, force: true });
 execSync("npm run build", { cwd: new URL("web/", root), stdio: "inherit" });
@@ -31,4 +41,7 @@ const size = (dir) =>
     const p = new URL(f, dir);
     return fs.statSync(p).isFile() ? sum + fs.statSync(p).size : sum;
   }, 0);
-console.log(`ready: Build ${(size(new URL("Build/", deploy)) / 1e6).toFixed(2)} MB, assets ${(size(new URL("assets/", deploy)) / 1e6).toFixed(2)} MB`);
+const glyphSize = fs.existsSync(new URL("glyph/Build/", deploy)) ? size(new URL("glyph/Build/", deploy)) : 0;
+console.log(
+  `ready: racer ${(size(new URL("Build/", deploy)) / 1e6).toFixed(2)} MB, glyph ${(glyphSize / 1e6).toFixed(2)} MB, assets ${(size(new URL("assets/", deploy)) / 1e6).toFixed(2)} MB`,
+);

@@ -71,9 +71,32 @@ Rules are in `inspect` in `deploy/racer/api/sponsor.js`; the named tests are in 
 | Spend the same materials twice | Materials are reserved and the grant recorded in one serializable statement |
 | Lose materials to a failed transaction | Unused grants are refunded once they expire, settled against the player's on-chain sequence number |
 
+### On Glyph Forge runs
+
+Glyph Forge replays every run instead of judging it. The rules are `deploy/racer/api/glyph/_lib/runner.js` (server) and `RunnerSim.cs` (client), kept identical by `glyph/level/vectors.*`; the tests named below are in `deploy/racer/test/glyph-judge.test.mjs` and `glyph-runner.test.mjs`.
+
+| Attack | Defence | Evidence |
+|---|---|---|
+| Claim runes that were never reached | The client sends only its inputs; the server replays them on the run's seed and pays exactly the runes the replay collected | `a played run earns exactly the runes its replay collected` |
+| Report surviving longer than you did | The replay decides when the run ended, whatever the client claims | `the replay, not the client, decides how the run ended` |
+| Compute perfect inputs offline and submit instantly | A run cannot be longer than the wall-clock time since its seed was issued (3 s slack) | `a run cannot be longer than the time since its seed was issued` |
+| Shop for an easy seed | The server picks the seed; starting a new run abandons the last one, and starts are limited to 120 an hour | `api/glyph/start.js` |
+| Submit the same run twice | Submission flips `finished_at` in a single conditional update | `api/glyph/run.js` |
+| Farm with a perfect bot | Runes are capped at 60 per player per 24 hours, and every item still costs USDC | `rewards stop at the daily cap, in collection order` |
+| Malformed or oversized input logs | Strictly increasing ticks within the run, known actions only, at most one input per three ticks on average | `malformed input logs are refused before replay` |
+| Client and server rules drift apart | CI compiles the C# simulation with Mono and checks it against vectors generated from the server's rules | `tools/glyph-verify.sh` |
+
+### Between studios
+
+| Attack | Defence | Evidence |
+|---|---|---|
+| One studio's server authorises crafts in another's game | Each game registers its own grant signer on-chain, and each server signs only for its own game id | `grant_from_wrong_signer_is_rejected`; `api/grant.js` and `api/glyph/grant.js` |
+| A leaked grant key keeps working | The studio rotates it with `update_game`; grants from the old key are then rejected | SDK test `a studio rotates its grant signer with update_game, and the old key's grants stop working` |
+| Showing a frame you don't own on a leaderboard | Each game's server checks on-chain ownership (`itemBalance`) before storing the frame it shows | `verifiedFrame` in `api/_lib/chain.js` and `api/glyph/_lib/studio.js` |
+
 ## Known limitations
 
-- **Gameplay is verified by plausibility, not replay.** A skilled cheater who produces realistic checkpoint times can earn materials they didn't drive for. Materials only unlock the right to buy; every item is still paid for in USDC, so this cannot extract value. Verifiable replays are on the roadmap.
+- **Neon Racer runs are verified by plausibility, not replay.** A skilled cheater who produces realistic checkpoint times can earn materials they didn't drive for. Materials only unlock the right to buy; every item is still paid for in USDC, so this cannot extract value. Glyph Forge already replays every run; the racer's physics would need the same deterministic rewrite.
 - **A compromised grant signer** could authorise crafts without gameplay, but not free items: crafting still requires the player's USDC. Studios can rotate the signer with `update_game`.
 - **The admin key is a single key** on devnet. Mainnet will use a fresh key, with a multisig as the next step.
 - **Not audited.** Launch caps (per player $25, plus per-game and global caps) bound the loss from any undiscovered bug.

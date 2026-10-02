@@ -8,7 +8,7 @@
 
 # PixelVault
 
-**In-game purchases you can refund.** Every item holds USDC that a Solana program, not the studio, guarantees the player can take back. One racing game, three tracks, nine backed items, and one claim that takes ninety seconds to check.
+**In-game purchases you can refund.** Every item holds USDC that a Solana program, not the studio, guarantees the player can take back. Two games from two studios, fifteen backed items, one wallet across both, and one claim that takes ninety seconds to check.
 
 [![CI](https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/actions/workflows/ci.yml/badge.svg)](https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/actions/workflows/ci.yml)
 [![program tests](https://img.shields.io/badge/program%20tests-12%20adversarial-brightgreen)](#the-test-suite-and-what-each-test-catches)
@@ -31,6 +31,7 @@ You can check the claim yourself in about ninety seconds:
 1. Open the game ([TELEGRAM_BOT](https://TELEGRAM_BOT) or [LIVE_URL](https://LIVE_URL)). New players get 2 test USDC once, so the first craft is free.
 2. Win a medal, open the **Garage** and craft any item. Its refund value is printed on the card before you pay.
 3. Open the **Vault** and press **Redeem**. The item burns and its backing lands in your wallet. The *Protocol, live from the chain* panel underneath reads every vault balance directly from Solana, not from our database, and shows whether each one covers what it owes.
+4. Or press **Move to another game** instead: the item's backing pays for a Glyph Forge frame in the same transaction, and the frame then borders your name on both games' leaderboards.
 
 | | |
 |---|---|
@@ -38,15 +39,16 @@ You can check the claim yourself in about ninety seconds:
 | **Program** | [`AANvcGam…zNsuoZ`](https://explorer.solana.com/address/AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ?cluster=devnet) on devnet |
 | **Threat model** | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md): every attack we considered, its defence, and the test that proves it |
 | **Run locally** | `node tools/serve-web.mjs deploy/racer 8091` → http://localhost:8091 |
+| **Second game** | [Glyph Forge](#4-glyph-forge-does-value-really-move-between-games): an endless runner from a separate studio, built only on the SDK, every run replayed on the server |
 | **Studio SDK** | [`sdk/`](sdk): sign grants, build craft/redeem/route transactions, cash out. [Integration guide](sdk/README.md) |
-| **Tests** | 12 program tests, SDK tests against the compiled program, relayer rule tests: all in [CI](.github/workflows/ci.yml) on every push |
+| **Tests** | 12 program tests, SDK tests against the compiled program, relayer and run-replay tests, the runner's C# checked against the server's rules: all in [CI](.github/workflows/ci.yml) on every push |
 
 Built for the **Colosseum Crypto World's Fair** hackathon, Solana track.
 
 ## Contents
 
 - [Who this is for](#who-this-is-for)
-- [What you are looking at](#what-you-are-looking-at): the race, the garage, the vault
+- [What you are looking at](#what-you-are-looking-at): the race, the garage, the vault, and a second studio's game
 - [The idea, in three steps](#the-idea-in-three-steps)
 - [Where this sits](#where-this-sits): against ordinary purchases, NFTs and game tokens
 - [The economy](#the-economy): every item, its price, its backing and its recipe
@@ -68,7 +70,7 @@ Built for the **Colosseum Crypto World's Fair** hackathon, Solana track.
 
 ## What you are looking at
 
-One Telegram Mini App with a React shell around a Unity WebGL game. There are three screens that matter, in the order a player meets them.
+One Telegram Mini App with two Unity WebGL games from two studios, sharing one wallet and one vault. Four screens matter, in the order a player meets them.
 
 ### 1. THE RACE: why does anyone want an item?
 
@@ -112,7 +114,28 @@ One Telegram Mini App with a React shell around a Unity WebGL game. There are th
 
 **Cash out any time.** The Vault's wallet panel shows a deposit address and withdraws USDC to any Solana wallet or exchange address, fees paid by the relayer.
 
-**Value moves between games at par.** *Move to another game* redeems an item in one game and crafts one in another inside a single transaction, so the backing never leaves the protocol and the player pays only the difference. See [Honest limitations](#honest-limitations): the second game is not playable yet.
+**Value moves between games at par.** *Move to another game* redeems an item in one game and crafts one in another inside a single transaction, so the backing never leaves the protocol and the player pays only the difference.
+
+### 4. GLYPH FORGE: does value really move between games?
+
+<!-- GIF 6 (~10 s): Glyph Forge: countdown, the runner dodges a wall, jumps a low
+     barrier, slides under a bar, collects a line of runes, speeds up through the
+     forge as the pillar glow shifts colour, crashes; the results sheet shows runes kept.
+<img src="docs/media/glyph-run.gif" alt="A Glyph Forge run" width="100%">
+-->
+
+**A second game, from a second studio.** Glyph Forge is an endless runner: three lanes, swipe to change lanes, jump and slide, gather three kinds of runes, and go as far as you can while it speeds up. It has its own Unity project, its own backend (`/api/glyph/*`) with its own tables, and its own grant-signing key registered on-chain. It talks to PixelVault only through [`@pixelvault/sdk`](sdk), exactly as an outside studio would.
+
+**Every run is replayed on the server.** When a run starts, the server issues a random seed. The level is generated from that seed, and the runner's movement is an integer-only, fixed-tick simulation written identically in C# (the game) and JavaScript (the server). When the run ends, the game sends only its inputs; the server replays them on the seed and pays out exactly the runes the replay collected. Generated test vectors keep the two implementations byte-for-byte identical in CI.
+
+<!-- GIF 7 (~10 s): Neon Racer Vault: "Move to another game" on Cyan Pulse -> pick
+     "Glyph Forge · Neon Frame" -> one transaction -> open Glyph Forge: the runner now
+     glows cyan with the racer's underglow under its feet; then the Neon Racer
+     leaderboard showing the name in a cyan frame.
+<img src="docs/media/across-games.gif" alt="One item's value moving from Neon Racer into Glyph Forge" width="100%">
+-->
+
+**Items mean something in both games.** Glyph Forge frames border your name on both games' leaderboards, and the runner wears the Neon Racer trail and underglow your wallet holds. Neither studio asks the other: each reads ownership from the chain with the SDK's `itemBalance`.
 
 ## The idea, in three steps
 
@@ -157,12 +180,16 @@ Prices and backing are fixed per item class on-chain. Recipes are enforced by th
 | Ion | trail | $0.25 | 60% | $0.15 | 1 Frost Core, 1 Neon Shard |
 | Genesis Gold | trail, **100 ever** | $1.00 | 95% | $0.95 | 3 of each material |
 
-**Glyph Forge** (second studio, registered on-chain; see [limitations](#honest-limitations))
+**Glyph Forge** (runes: 60 per player per day)
 
 | Item | Type | Price | Backing | Refund | Recipe |
 |---|---|---|---|---|---|
-| Neon Frame | frame | $0.50 | 80% | $0.40 | none |
-| Obsidian Frame | frame | $0.90 | 90% | $0.81 | none |
+| Neon Frame | frame | $0.50 | 80% | $0.40 | 12 Tide Rune, 8 Ember Rune |
+| Obsidian Frame | frame | $0.90 | 90% | $0.81 | 10 Storm Rune, 10 Tide Rune |
+| Gilded Frame | frame, **100 ever** | $1.00 | 95% | $0.95 | 15 of each rune |
+| Ember Aura | aura | $0.30 | 70% | $0.21 | 15 Ember Rune |
+| Tide Aura | aura | $0.30 | 70% | $0.21 | 15 Tide Rune |
+| Storm Aura | aura | $0.60 | 85% | $0.51 | 12 Storm Rune |
 
 ## What the program guarantees
 
@@ -183,29 +210,36 @@ Each guarantee is enforced by the program and covered by a named test in [`test_
 ```mermaid
 flowchart LR
     subgraph Telegram Mini App
-        U[Unity WebGL racer] <-->|jslib bridge| R[React shell]
-        R --- W[Privy embedded wallet]
+        U[Neon Racer<br/>Unity WebGL] <-->|bridge| R[racer page]
+        G[Glyph Forge<br/>Unity WebGL] <-->|bridge| GP[Glyph Forge page]
+        R --- W[shared wallet + vault<br/>Privy, @pixelvault/sdk]
+        GP --- W
     end
     R -->|initData-signed calls| API
+    GP -->|initData-signed calls| GAPI
     subgraph Vercel
-        API[session / run / grant<br/>starter / stats / leaderboard / ghost]
+        API[Neon Racer studio<br/>session / run / grant / starter]
+        GAPI[Glyph Forge studio<br/>start / run replay / grant]
         S[sponsor relayer]
     end
     API --- DB[(Neon Postgres)]
-    R -->|player-signed tx| S
+    GAPI --- DB
+    W -->|player-signed tx| S
     S -->|co-signs as fee payer| P[PixelVault program]
-    API -->|reads vaults| P
+    API -->|reads chain| P
+    GAPI -->|reads chain| P
     P --- V[(per-game USDC vaults)]
 ```
 
 | Path | What it is |
 |---|---|
 | [`pixelvault/`](pixelvault) | Anchor program: protocol, game vaults, Token-2022 item classes, craft, redeem, raise backing; litesvm tests |
-| [`game/`](game) | Unity 6 racing game for WebGL: car physics, procedural tracks and scenery, ghosts, bloom, and a quality governor that drops effects on slow phones |
+| [`game/`](game) | Neon Racer, Unity 6 for WebGL: car physics, procedural tracks and scenery, ghosts, bloom, and a quality governor that drops effects on slow phones |
+| [`glyph/`](glyph) | Glyph Forge: the Unity 6 runner (`glyph/game`), and the level and replay test vectors it shares with its server (`glyph/level`) |
 | [`sdk/`](sdk) | `@pixelvault/sdk`: what a studio integrates. Grant signing, craft/redeem/route and USDC transfer instructions, balances, the exact price split. The racer uses it on both client and server |
-| [`web/`](web) | React app around the game: Telegram login, Privy wallet, garage, vault with deposit and withdraw, ranks, settings |
-| [`deploy/racer/`](deploy/racer) | Vercel deployment: the assembled builds plus API functions and the database schema |
-| [`tools/`](tools) | Devnet bootstrap, deploy assembly, DB migration, local server, relayer attack tests, track calibration |
+| [`web/`](web) | React pages for both games (`index.html`, `glyph.html`) on a shared wallet layer: Telegram login, Privy wallet, vault with deposit and withdraw, garage and forge, ranks |
+| [`deploy/racer/`](deploy/racer) | Vercel deployment: both builds, both studios' API functions (`api/`, `api/glyph/`), the relayer and the database schema |
+| [`tools/`](tools) | Devnet bootstrap, deploy assembly, DB migration, local server, relayer attack tests, track calibration, Glyph Forge vectors and the Unity compile check |
 
 **A craft, end to end.** (1) The app asks `/api/grant` for a craft. The server verifies the Telegram login, reserves the recipe's materials and records the grant in one serializable statement, then signs a digest of program, game, class, player, sequence and expiry. (2) The app builds an Ed25519 verification instruction followed by `craft`, and the embedded wallet signs. (3) `/api/sponsor` checks the Telegram login and that the only other signer is that player's wallet. It pays only for `craft`, `redeem` and USDC withdrawals, never lets the sponsor appear except as `craft`'s rent payer, refuses lookup tables and priority fees, and rate-limits each wallet. Then it co-signs and submits. (4) The program verifies the grant, moves the backing to the vault and the margin to the two treasuries, checks the caps and solvency, and mints one unit.
 
@@ -228,9 +262,11 @@ flowchart LR
 | `per_player_cap_is_enforced` | The per-player launch cap |
 | `supply_cap_is_enforced` | Limited editions |
 
-**The SDK** (`cd sdk && npm test`) pins every byte it produces to vectors taken from the original racer code, then runs the full flow against the compiled program in litesvm: two studios, a zero-SOL player, craft, redeem, a cross-studio route, a withdrawal and a rejected replay.
+**The SDK** (`cd sdk && npm test`) pins every byte it produces to vectors taken from the original racer code, then runs the full flow against the compiled program in litesvm: two studios, a zero-SOL player, craft, redeem, a cross-studio route, a withdrawal, a rejected replay, and a studio rotating its grant signer so the old key's grants stop working.
 
-**The relayer** (`node --test deploy/racer/test/*.test.mjs`) has a test for each rule in its [threat model section](docs/THREAT_MODEL.md#on-the-relayer): no draining, no priority fees, no sponsor-as-account, no studio operations, no other people's wallets, and withdrawals limited to the player's own USDC. [`tools/test-sponsor.mjs`](tools/test-sponsor.mjs) repeats the main attacks against a live server on devnet.
+**Glyph Forge's rules** are checked from both sides. `node --test deploy/racer/test/*.test.mjs` checks that the server's rules still produce the committed vectors, that a perfect-knowledge bot survives ten minutes on every seed tested (so no level is impossible), and that the run judge pays only what the replay collected, refuses runs longer than the time since their seed, enforces the daily cap and lets the replay, not the client, decide how a run ended. [`tools/glyph-verify.sh`](tools/glyph-verify.sh) compiles the Unity runner's simulation with Mono and checks it against the same vectors, and [`tools/unity-typecheck.sh`](tools/unity-typecheck.sh) compiles every runner script against Unity's API, without the editor.
+
+**The relayer** (same command) has a test for each rule in its [threat model section](docs/THREAT_MODEL.md#on-the-relayer): no draining, no priority fees, no sponsor-as-account, no studio operations, no other people's wallets, and withdrawals limited to the player's own USDC. [`tools/test-sponsor.mjs`](tools/test-sponsor.mjs) repeats the main attacks against a live server on devnet.
 
 ## Reproducing
 
@@ -263,9 +299,17 @@ node tools/sync-data.mjs   # also copies sdk/dist into the API functions
 cd web && npm install && npm run build
 ```
 
-**Game:** open `game/` in Unity 6000.0.84f1 and run *PixelVault → Build Web*, or headless with `-executeMethod GameBuilder.BuildWeb`.
+**Games:** in Unity 6000.0.84f1, open `game/` and run *PixelVault → Build Web* (headless: `-executeMethod GameBuilder.BuildWeb`), then open `glyph/game` and run *Glyph Forge → Build Web* (headless: `-executeMethod GlyphBuilder.BuildWeb`). *Glyph Forge → Create Scene* builds the runner's scene without a player build, to press Play in the editor.
 
-**Assemble and serve** (copies the Unity and web builds plus shared data into `deploy/racer`):
+**Glyph Forge's rules** (after changing `deploy/racer/api/glyph/_lib/runner.js`, mirror it in `RunnerSim.cs`, then):
+
+```bash
+node tools/glyph-vectors.mjs   # regenerate glyph/level/vectors.*
+tools/glyph-verify.sh          # the C# port must match (needs mono-devel)
+tools/unity-typecheck.sh glyph/game
+```
+
+**Assemble and serve** (copies both Unity builds and the web build plus shared data into `deploy/racer`):
 
 ```bash
 node tools/assemble-deploy.mjs
@@ -273,12 +317,13 @@ node tools/db-migrate.mjs
 node tools/serve-web.mjs deploy/racer 8091
 ```
 
-**Environment** for the API functions: `DATABASE_URL`, `TELEGRAM_BOT_TOKEN`, `GRANT_SIGNER_SECRET`, `SPONSOR_SECRET_KEY`, `FUNDER_SECRET`, and optionally `RPC_URL` and `STARTER_MICRO_USDC`. Secret keys are JSON byte arrays.
+**Environment** for the API functions: `DATABASE_URL`, `TELEGRAM_BOT_TOKEN`, `GRANT_SIGNER_SECRET` (Neon Racer's grant key, `secrets/grant-signer-devnet.json`), `GLYPH_GRANT_SIGNER_SECRET` (Glyph Forge's, `secrets/grant-signer-glyph-forge-devnet.json`), `SPONSOR_SECRET_KEY`, `FUNDER_SECRET`, and optionally `RPC_URL` and `STARTER_MICRO_USDC`. Secret keys are JSON byte arrays. Re-running `tools/setup-devnet.mjs` gives Glyph Forge its own grant key on-chain with `update_game` and creates its new item classes.
 
 ## Honest limitations
 
-- **The second game is not playable yet.** Glyph Forge is registered on-chain as its own studio with its own vault and two item classes, but it has no gameplay, its items need no materials, and it shares the racer's grant signer and backend. Moving value between games works on-chain today; a real second game, run as an independent studio, is next.
-- **Gameplay is checked for plausibility, not replayed.** A skilled cheater who produces realistic checkpoint times can earn materials they didn't drive for. Every item is still paid for in USDC, so this cannot extract money.
+- **Both studios are the same author.** Glyph Forge is separated as an outside studio would be (its own project, backend, tables and on-chain grant key, PixelVault only through the SDK), but it is not yet a third party. The next proof is an outside developer integrating the SDK.
+- **Glyph Forge is new.** Its rules are verified in CI and its scripts compile against Unity's API, but the runner still needs play-testing and tuning on real phones.
+- **Neon Racer runs are checked for plausibility, not replayed.** A skilled cheater who produces realistic checkpoint times can earn materials they didn't drive for. (Glyph Forge runs are replayed; a bot that plays perfectly still earns at most the daily rune cap.) Every item is still paid for in USDC, so neither can extract money.
 - **Devnet only.** USDC is a mock mint and the starter grant is minted from it. A mainnet build needs a new admin key in [`constants.rs`](pixelvault/programs/pixelvault/src/constants.rs), and the admin will move to a multisig.
 - **Not audited.** Launch caps (including $25 of backing per player per game) bound the loss from any undiscovered bug.
 

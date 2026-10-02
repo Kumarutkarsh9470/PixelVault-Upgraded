@@ -43,11 +43,13 @@ const route = await routeInstructions(deployment, { player, rentPayer, from: { g
 
 ### Players without SOL
 
-`compileSponsored(instructions, quote)` builds a transaction whose fee payer is a sponsor. The player signs it, and the sponsor co-signs and submits. See `deploy/racer/api/sponsor.js` for a relayer that refuses anything except PixelVault, Ed25519 and Memo instructions, and lets the sponsor appear only as `craft`'s rent payer (`CRAFT_RENT_PAYER_INDEX`).
+`compileSponsored(instructions, quote)` builds a transaction whose fee payer is a sponsor. The player signs it, and the sponsor co-signs and submits. See `deploy/racer/api/sponsor.js` for a relayer that requires the player's login, pays only for `craft`, `redeem` and USDC withdrawals, lets the sponsor appear only as `craft`'s rent payer (`CRAFT_RENT_PAYER_INDEX`), and rate-limits each wallet.
 
 ## Reading state
 
 - `fetchBalances(rpc, deployment, owner)`: USDC and every item a wallet holds.
+- `itemBalance(rpc, deployment, owner, { gameId, classId })`: one item's count in a single call. Use it to honour another game's items; Glyph Forge and Neon Racer both use it for leaderboard frames.
+- `resolveUsdcAccount` and `usdcTransferInstruction`: let players cash out to any wallet or exchange address.
 - `splitPrice(price, backingBps, feeBps)`: exactly where a craft's USDC goes (backing, protocol fee, studio cut), with the program's rounding.
 - `refundOf(price, backingBps)`: what redeeming one unit returns.
 
@@ -57,4 +59,4 @@ const route = await routeInstructions(deployment, { player, rentPayer, from: { g
 npm test
 ```
 
-`test/vectors.test.ts` pins every byte the SDK produces to reference vectors. `test/program.test.ts` runs the full flow against the compiled program in [litesvm](https://github.com/LiteSVM/litesvm): two studios, a zero-SOL player, craft, redeem, route and a rejected replay. It needs `anchor build` output and the protocol admin keypair, and is skipped otherwise; CI always runs it.
+`test/vectors.test.ts` pins every byte the SDK produces to reference vectors. `test/program.test.ts` runs the full flow against the compiled program in [litesvm](https://github.com/LiteSVM/litesvm): two studios, a zero-SOL player, craft, redeem, route, a withdrawal, a rejected replay, and a grant-signer rotation. It needs `anchor build` output and the protocol admin keypair, and is skipped otherwise; CI always runs it.

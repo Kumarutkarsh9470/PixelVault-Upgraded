@@ -110,7 +110,8 @@ http
   .createServer((req, res) => {
     const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
     console.log(`${req.method} ${urlPath}`);
-    const fn = urlPath.match(/^\/api\/([\w-]+)\/?$/);
+    // Nested functions (api/glyph/start.js) route too; folders starting with _ are private, as on Vercel.
+    const fn = urlPath.match(/^\/api\/((?:[A-Za-z0-9-][\w-]*\/)*[A-Za-z0-9-][\w-]*)\/?$/);
     if (fn) {
       runFunction(fn[1], req, res).catch((e) => {
         console.error(e);

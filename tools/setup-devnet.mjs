@@ -1,6 +1,6 @@
 // One-shot devnet bootstrap for the PixelVault economy:
-//   mock USDC mint -> protocol -> two games (two studios) -> every catalogue
-//   item class -> web/src/data/chain.json.
+//   mock USDC mint -> protocol -> two games (two studios, each with its own
+//   grant signer) -> every catalogue item class -> web/src/data/chain.json.
 // Idempotent: accounts that already exist are skipped, and generated keys are
 // kept in secrets/ (gitignored) so reruns reuse them.
 // Usage: node tools/setup-devnet.mjs
@@ -101,7 +101,6 @@ async function fund(admin, to, sol) {
 async function main() {
   const admin = readKey(ADMIN_PATH);
   const funder = secretKey("funder-devnet"); // mock USDC mint authority; pays starter grants
-  const grantSigner = secretKey("grant-signer-devnet");
   const usdcMint = secretKey("usdc-mint-devnet");
   console.log("admin", admin.publicKey.toBase58(), (await connection.getBalance(admin.publicKey)) / LAMPORTS_PER_SOL, "SOL");
 
@@ -149,7 +148,6 @@ async function main() {
     usdcMint: usdcMint.publicKey.toBase58(),
     protocol: protocol.toBase58(),
     protocolTreasury: protocolTreasury.toBase58(),
-    grantSigner: grantSigner.publicKey.toBase58(),
     games: {},
   };
 
@@ -160,6 +158,8 @@ async function main() {
     const gameAddress = pda(Buffer.from("game"), u64(game.gameId));
     const vault = ata(gameAddress, usdcMint.publicKey);
     const treasury = ata(studio.publicKey, usdcMint.publicKey);
+    // Each studio signs its own grants. Neon Racer keeps the original key name.
+    const grantSigner = secretKey(game.gameId === 1 ? "grant-signer-devnet" : `grant-signer-${game.key}-devnet`);
 
     if (!(await exists(gameAddress))) {
       await send(studio, [
@@ -180,6 +180,19 @@ async function main() {
         ),
       ]);
       console.log(`registered game ${game.gameId} ${game.name}`, gameAddress.toBase58());
+    } else {
+      // Game layout: discriminator (8), authority (32), grant_signer (32), ...
+      const current = new PublicKey((await connection.getAccountInfo(gameAddress)).data.subarray(40, 72));
+      if (!current.equals(grantSigner.publicKey)) {
+        await send(studio, [
+          ix(
+            [meta(studio.publicKey, false, true), meta(gameAddress, true)],
+            // update_game(crafting_paused: None, grant_signer: Some(key), backed_cap: None)
+            Buffer.concat([disc("update_game"), Buffer.from([0, 1]), grantSigner.publicKey.toBuffer(), Buffer.from([0])]),
+          ),
+        ]);
+        console.log(`rotated ${game.name}'s grant signer to ${grantSigner.publicKey.toBase58()}`);
+      }
     }
 
     const classes = {};
@@ -208,7 +221,13 @@ async function main() {
       }
       classes[item.classId] = { itemClass: itemClass.toBase58(), mint: mint.publicKey.toBase58() };
     }
-    chain.games[game.gameId] = { game: gameAddress.toBase58(), vault: vault.toBase58(), treasury: treasury.toBase58(), classes };
+    chain.games[game.gameId] = {
+      game: gameAddress.toBase58(),
+      vault: vault.toBase58(),
+      treasury: treasury.toBase58(),
+      grantSigner: grantSigner.publicKey.toBase58(),
+      classes,
+    };
   }
 
   fs.writeFileSync(new URL("../web/src/data/chain.json", import.meta.url), JSON.stringify(chain, null, 2) + "\n");

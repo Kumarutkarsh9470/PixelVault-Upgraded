@@ -20,6 +20,22 @@
     {
       "source": "/Build/(.*).data.br",
       "headers": [{ "key": "Content-Type", "value": "application/octet-stream" }]
+    },
+    {
+      "source": "/glyph/Build/(.*).br",
+      "headers": [{ "key": "Content-Encoding", "value": "br" }]
+    },
+    {
+      "source": "/glyph/Build/(.*).js.br",
+      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
+    },
+    {
+      "source": "/glyph/Build/(.*).wasm.br",
+      "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
+    },
+    {
+      "source": "/glyph/Build/(.*).data.br",
+      "headers": [{ "key": "Content-Type", "value": "application/octet-stream" }]
     }
   ]
 }
