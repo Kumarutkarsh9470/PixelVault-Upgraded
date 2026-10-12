@@ -5,12 +5,12 @@
   "usdcMint": "6EYihbTfyfyrtTSeiUybwrAJfYCquW8TmET1Rw2tmvmF",
   "protocol": "HD56Wj5pVeQ5pHjxGvVqq995GAvc62ee3MMDJ2fU36Gy",
   "protocolTreasury": "6bwzz7mCgxfFX35TVQWgpSTxxTUng21bpjyGCSYNQN4g",
-  "grantSigner": "6WzMGJyLsGcAZ21ecaDm9kjC2CpEZNt8dJU9c8BctTxr",
   "games": {
     "1": {
       "game": "F1X3RdffQNEGKyqQfznmsq2ssHJKS5auXXxgmvC5ciAk",
       "vault": "VDcEFPEDiqqJjAuTh8boHXGMPVFq34AQXbpMVAQh3WG",
       "treasury": "4shE4eTrBJJ9VJMyndwBGaTWwx49tFB8cENjYyDWmuhQ",
+      "grantSigner": "6WzMGJyLsGcAZ21ecaDm9kjC2CpEZNt8dJU9c8BctTxr",
       "classes": {
         "1": {
           "itemClass": "746u8nLuwP2jZXsfhJWNUiVAuoWdiHVzhMBf3ofwHoMC",
@@ -54,6 +54,7 @@
       "game": "87uoYgdrEyfFZq9tPFY2eDDvJN4fRy1R8gjD7jEFBB2N",
       "vault": "HPk2u9wYfMuq7dWKGjhCSFoXbgYWXtdA8nXRMjK93qXb",
       "treasury": "3d3igMvmCR9hFEc76DUFf7vcxj1pns9SMiZrdSyH4Y1U",
+      "grantSigner": "577NmBmkfuT9arEQ51MLfmUkQBCiLE8bemU4eqQcHJ83",
       "classes": {
         "1": {
           "itemClass": "DhGzyeAfihK8yQoc5dNghgC4Gkbk3eVGojnhMy18tEU3",
@@ -62,6 +63,22 @@
         "2": {
           "itemClass": "9JN2Q8cEtjn3wN1KWYw8ZPwMjH8uYxdZWA5k5Ngpw4D4",
           "mint": "2WAN3GubwXb4mEmbHnoUo6RU64iBTaxeFLJyGa24c6E1"
+        },
+        "3": {
+          "itemClass": "6iETF4vdujQ7u7urhiJebsJZ9ufb5xL5iimsoMCw7iLH",
+          "mint": "SiShyoF4HFii97pdyCQoN4hdRmhG6KgtM6qGyfBnyJN"
+        },
+        "10": {
+          "itemClass": "3BGeseVxo8uU7zR75eKKudqMiv6MhxdDYQnvtGTAx6mh",
+          "mint": "3rk1kgGQpcjui9HsfbAHrPYFw5V9i1BP7WEodJnFpiX7"
+        },
+        "11": {
+          "itemClass": "JEZop4CogJoJ3TjFDPMAskm6cPxazM4jAJ91HyG7eKQ",
+          "mint": "GovaLa38m4DAEN7AprkYJh2sJUtqhydhFvkLGsHYjDcT"
+        },
+        "12": {
+          "itemClass": "HdoXXq1UwuTMaxsZaSw5UTm83ncdvAgLpwuWAVxiMP9g",
+          "mint": "DCuUYhWx2r8RQgKWz5PQYnqXqhcTS4UxFZ5p7Zj9GxV3"
         }
       }
     }

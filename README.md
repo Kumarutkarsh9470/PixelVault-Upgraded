@@ -1,11 +1,3 @@
-<!--
-  Placeholders to fill before publishing:
-    LIVE_URL      the deployed Mini App (also used in the badge below)
-    TELEGRAM_BOT  the t.me link that opens the Mini App
-  Every GIF slot is an HTML comment starting with "GIF" and says what to record.
-  Save media under docs/media/ and uncomment the <img> line inside the slot.
--->
-
 # PixelVault
 
 **In-game purchases you can refund.** Every item holds USDC that a Solana program, not the studio, guarantees the player can take back. Two games from two studios, fifteen backed items, one wallet across both, and one claim that takes ninety seconds to check.
@@ -14,7 +6,7 @@
 [![program tests](https://img.shields.io/badge/program%20tests-12%20adversarial-brightgreen)](#the-test-suite-and-what-each-test-catches)
 [![devnet](https://img.shields.io/badge/solana-devnet-9945FF)](https://explorer.solana.com/address/AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ?cluster=devnet)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-<!-- [![live](https://img.shields.io/badge/live-LIVE_URL-orange)](https://LIVE_URL) -->
+[![live](https://img.shields.io/badge/live-pixelvault--racer.vercel.app-orange)](https://pixelvault-racer.vercel.app)
 
 <!-- GIF 1 (hero, ~20 s, loops): finish a race on Neon Harbor -> medal and materials
      appear -> Garage: craft "Cyan Pulse" -> car shows the new underglow -> Vault:
@@ -28,14 +20,14 @@
 
 You can check the claim yourself in about ninety seconds:
 
-1. Open the game ([TELEGRAM_BOT](https://TELEGRAM_BOT) or [LIVE_URL](https://LIVE_URL)). New players get 2 test USDC once, so the first craft is free.
+1. Open the game ([t.me/pixelvault_racer_bot](https://t.me/pixelvault_racer_bot/race) or [pixelvault-racer.vercel.app](https://pixelvault-racer.vercel.app)). New players get 2 test USDC once, so the first craft is free.
 2. Win a medal, open the **Garage** and craft any item. Its refund value is printed on the card before you pay.
 3. Open the **Vault** and press **Redeem**. The item burns and its backing lands in your wallet. The *Protocol, live from the chain* panel underneath reads every vault balance directly from Solana, not from our database, and shows whether each one covers what it owes.
 4. Or press **Move to another game** instead: the item's backing pays for a Glyph Forge frame in the same transaction, and the frame then borders your name on both games' leaderboards.
 
 | | |
 |---|---|
-| **Play** | [TELEGRAM_BOT](https://TELEGRAM_BOT), or [LIVE_URL](https://LIVE_URL) in a browser |
+| **Play** | [t.me/pixelvault_racer_bot](https://t.me/pixelvault_racer_bot/race), or [pixelvault-racer.vercel.app](https://pixelvault-racer.vercel.app) in a browser |
 | **Program** | [`AANvcGam…zNsuoZ`](https://explorer.solana.com/address/AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ?cluster=devnet) on devnet |
 | **Threat model** | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md): every attack we considered, its defence, and the test that proves it |
 | **Run locally** | `node tools/serve-web.mjs deploy/racer 8091` → http://localhost:8091 |
@@ -323,9 +315,15 @@ node tools/serve-web.mjs deploy/racer 8091
 
 - **Both studios are the same author.** Glyph Forge is separated as an outside studio would be (its own project, backend, tables and on-chain grant key, PixelVault only through the SDK), but it is not yet a third party. The next proof is an outside developer integrating the SDK.
 - **Glyph Forge is new.** Its rules are verified in CI and its scripts compile against Unity's API, but the runner still needs play-testing and tuning on real phones.
-- **Neon Racer runs are checked for plausibility, not replayed.** A skilled cheater who produces realistic checkpoint times can earn materials they didn't drive for. (Glyph Forge runs are replayed; a bot that plays perfectly still earns at most the daily rune cap.) Every item is still paid for in USDC, so neither can extract money.
+- **Neon Racer runs are checked for plausibility, not replayed.** A skilled cheater who produces realistic checkpoint times can earn materials they didn't drive for. (Glyph Forge runs are replayed; a bot that plays perfectly still earns at most the daily rune cap.) Every item is still paid for in USDC, so neither can extract money. The fix is on the [`verified-runs`](https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/tree/verified-runs) branch, described below.
 - **Devnet only.** USDC is a mock mint and the starter grant is minted from it. A mainnet build needs a new admin key in [`constants.rs`](pixelvault/programs/pixelvault/src/constants.rs), and the admin will move to a multisig.
 - **Not audited.** Launch caps (including $25 of backing per player per game) bound the loss from any undiscovered bug.
+
+## In progress: runs the chain verifies itself
+
+Every web3 game, including this one, has a server that decides whether a run was real. The [`verified-runs`](https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/tree/verified-runs) branch removes that trust assumption for Neon Racer: the car physics are rewritten as an integer-only, fixed-tick simulation (Q16.16, Rust canonical, ported to C# for Unity and kept bit-identical by a parity harness), the game records only the player's inputs, and the **program itself re-drives the race** from those inputs and derives the finish time. A run uploads as a run-length-encoded trace of about 800 bytes, is verified across several sponsored transactions through a resumable buffer account (about 1,670 compute units per simulation step), and lands on an on-chain leaderboard that no server wrote to.
+
+That branch has 37 passing tests, including one that checks the chain agrees with every rival time the game ships. It is not merged because its program is not yet deployed to devnet and its game build has not had enough phone testing; it is the next release.
 
 ## Prior work disclosure
 
