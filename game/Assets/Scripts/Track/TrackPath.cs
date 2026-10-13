@@ -13,6 +13,23 @@ public class TrackPath
 
     public int Count => Positions.Count;
 
+    /// The centreline the simulation and the chain share, converted to metres
+    /// for building meshes. Geometry is never re-derived here: both sides read
+    /// the same samples, so a replay meets the corners the player drove.
+    public static TrackPath FromSim(SimTrack track)
+    {
+        var path = new TrackPath { Spacing = FixedMath.ToFloat(track.Spacing) };
+        for (int i = 0; i < track.Samples.Length; i++)
+        {
+            SimSample sample = track.Samples[i];
+            path.Positions.Add(new Vector3(FixedMath.ToFloat(sample.X), 0f, FixedMath.ToFloat(sample.Z)));
+            path.Forwards.Add(new Vector3(FixedMath.ToFloat(sample.Fx), 0f, FixedMath.ToFloat(sample.Fz)));
+            path.Rights.Add(new Vector3(FixedMath.ToFloat(sample.RightX), 0f, FixedMath.ToFloat(sample.RightZ)));
+        }
+        path.Length = path.Spacing * path.Count;
+        return path;
+    }
+
     public static TrackPath FromFlatPoints(float[] flat, float spacing)
     {
         var controls = new List<Vector3>();

@@ -1422,4 +1422,39 @@ a.icon-button {
   font-weight: 700;
   text-align: center;
   background: rgba(7, 11, 23, 0.7);
+
+/* ---------- On-chain verification ---------- */
+
+.verifying {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.verify-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.verify-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.3s ease-out;
+}
+
+.verified {
+  display: block;
+  margin-top: 4px;
+  color: var(--good);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.verified:hover {
+  text-decoration: underline;
 }

@@ -52,9 +52,9 @@
       },
       "lapMeters": 657,
       "medals": {
-        "gold": 29140,
-        "silver": 31940,
-        "bronze": 36420
+        "bronze": 39850,
+        "gold": 31880,
+        "silver": 34940
       },
       "minPlausibleMs": 19498
     },
@@ -110,9 +110,9 @@
       },
       "lapMeters": 723,
       "medals": {
-        "gold": 36100,
-        "silver": 39580,
-        "bronze": 45130
+        "bronze": 48950,
+        "gold": 39160,
+        "silver": 42920
       },
       "minPlausibleMs": 21457
     },
@@ -164,9 +164,9 @@
       },
       "lapMeters": 680,
       "medals": {
-        "gold": 35580,
-        "silver": 39010,
-        "bronze": 44480
+        "bronze": 49420,
+        "gold": 39540,
+        "silver": 43340
       },
       "minPlausibleMs": 20181
     }

@@ -81,4 +81,12 @@ public class WebBridge : MonoBehaviour
     {
         GameRoot.Instance.SetBloom(value == "1" || value == "true");
     }
+
+    /// Runs a demo lap driven by the bot, recorded like any other run.
+    public void BotRace(string grip)
+    {
+        float value = 30f;
+        float.TryParse(grip, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out value);
+        GameRoot.Instance.BotRace(value);
+    }
 }

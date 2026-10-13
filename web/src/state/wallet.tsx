@@ -38,6 +38,8 @@ type WalletState = {
   withdraw: (to: string, amount: number) => Promise<string>;
   /** Called after every successful action, e.g. so a game can refresh its materials. */
   onChange: (listener: (() => Promise<unknown>) | null) => void;
+  /** Signs with the embedded wallet and has the relayer pay and submit; used for run verification. */
+  sponsor: (build: (feePayer: string) => Promise<Instruction[]>) => Promise<string>;
   clearError: () => void;
 };
 
@@ -186,6 +188,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     route,
     withdraw,
     onChange,
+    sponsor,
     clearError,
   };
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
@@ -286,6 +289,9 @@ export function DemoWalletProvider({ children }: { children: ReactNode }) {
     route,
     withdraw,
     onChange,
+    sponsor: async () => {
+      throw new Error("the showcase wallet cannot sign; open PixelVault in Telegram");
+    },
     clearError,
   };
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

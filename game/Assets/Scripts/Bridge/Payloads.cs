@@ -12,8 +12,31 @@ public class TrackPayload
     public float width = 14f;
     public float[] points;
     public ThemePayload theme = new ThemePayload();
-    public GhostPayload ghost;
+    /// The circuit the simulation runs on, shared with the chain.
+    public CircuitPayload circuit;
+    /// The opponent's run, as a base64 input trace.
+    public string ghostTrace;
     public LoadoutPayload loadout = new LoadoutPayload();
+}
+
+/// A circuit exactly as the Solana program stores it: the centreline in fixed
+/// point, its checkpoints and its boost pads. Built by tools/build-circuits.mjs
+/// and never derived again, so the game and the chain race the same corners.
+[Serializable]
+public class CircuitPayload
+{
+    public int laps;
+    public int spacing;
+    public int wallOffset;
+    public int startSample;
+    /// A whole turn is 2^32, so this does not fit in a signed int.
+    public long startHeading;
+    public int sampleCount;
+    /// Four values per sample: x, z, forward x, forward z.
+    public int[] samples;
+    public int[] checkpoints;
+    public int[] padSamples;
+    public int[] padLaterals;
 }
 
 [Serializable]
@@ -31,16 +54,7 @@ public class ThemePayload
     public string ambient = "#33416a";
     public string sun = "#9fb4ff";
     public float sunIntensity = 0.55f;
-    public float grip = 1f;
     public string scenery = "city";
-}
-
-[Serializable]
-public class GhostPayload
-{
-    public float interval;
-    /// Flat samples: x, y, z, yaw per sample.
-    public float[] samples;
 }
 
 [Serializable]
@@ -58,6 +72,9 @@ public class TrackLoadedEvent
     public float lengthMeters;
     public int laps;
     public int checkpoints;
+    /// False when the page sent no circuit: the track is playable but its runs
+    /// cannot be verified on-chain.
+    public bool verifiable;
 }
 
 [Serializable]
@@ -111,9 +128,12 @@ public class RaceFinishedEvent
 {
     public string trackId;
     public int totalMs;
+    /// Simulation steps, which is the time the chain will derive.
+    public int steps;
     public int laps;
-    public int respawns;
-    /// Race time in ms at each checkpoint crossing, in order, for server-side plausibility checks.
+    /// Race time in ms at each checkpoint crossing, in order.
     public int[] splits;
-    public GhostPayload ghost;
+    /// The inputs that produced this run, base64 encoded. This is what gets
+    /// verified on-chain, and what other players race against.
+    public string trace;
 }

@@ -36,4 +36,35 @@ pub enum PixelVaultError {
     GameCapReached,
     #[msg("Protocol backing cap reached")]
     ProtocolCapReached,
+    #[msg("Track definition is invalid")]
+    InvalidTrack,
+    #[msg("Track geometry is frozen")]
+    TrackFrozen,
+    #[msg("Track must be frozen before runs can be verified")]
+    TrackNotFrozen,
+    #[msg("Run trace is malformed")]
+    MalformedTrace,
+    #[msg("Run trace is longer than the simulation allows")]
+    TraceTooLong,
+    #[msg("These inputs never finished the race")]
+    RunNeverFinished,
+    #[msg("The run finished before the end of the trace")]
+    RunFinishedEarly,
+    #[msg("Verification has already started for this run")]
+    RunAlreadyStarted,
+    #[msg("This run has already been verified")]
+    RunAlreadyVerified,
+    #[msg("The trace has not been fully uploaded")]
+    TraceIncomplete,
+}
+
+impl From<crate::sim::SimError> for PixelVaultError {
+    fn from(error: crate::sim::SimError) -> Self {
+        match error {
+            crate::sim::SimError::MalformedTrace => PixelVaultError::MalformedTrace,
+            crate::sim::SimError::TraceTooLong => PixelVaultError::TraceTooLong,
+            crate::sim::SimError::NeverFinished => PixelVaultError::RunNeverFinished,
+            crate::sim::SimError::FinishedEarly => PixelVaultError::RunFinishedEarly,
+        }
+    }
 }

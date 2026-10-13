@@ -1,5 +1,9 @@
 import type { RunResult } from "../lib/api";
+import { demoMode } from "../lib/demo";
 import { formatTime } from "../lib/api";
+import { EXPLORER_SUFFIX, EXPLORER_TX } from "../config";
+import { useGame } from "../state/game";
+import type { VerifyProgress } from "../lib/verify";
 import type { Opponent } from "../lib/opponents";
 import type { RaceFinished } from "../lib/unity";
 import { AnimatedNumber, Confetti } from "../components/Fx";
@@ -27,12 +31,13 @@ export function Results({
   onHome: () => void;
 }) {
   const track = tracks.find((t) => t.id === finished.trackId);
+  const { verifying } = useGame();
   return (
     <div className="screen results">
       <Sheet>
         <p className="eyebrow">{track?.name}</p>
         <div className="result-time">
-          <AnimatedNumber value={finished.totalMs} format={formatTime} duration={900} />
+          <AnimatedNumber value={result?.totalMs ?? finished.totalMs} format={formatTime} duration={900} />
         </div>
         <div className="result-deltas">
           {opponent && (
@@ -47,7 +52,7 @@ export function Results({
           )}
         </div>
 
-        {!result && !error && <p className="muted">Checking your run…</p>}
+        {!result && !error && <Verifying progress={verifying} />}
         {error && <p className="error">Couldn't save this run: {error}</p>}
 
         {result && (
@@ -58,12 +63,22 @@ export function Results({
               {result.personalBest && <span className="pb">New personal best</span>}
             </div>
             {!result.valid && <p className="error">Run rejected: {result.reason}</p>}
-            {result.valid && track && result.medal !== "gold" && <NextMedal totalMs={finished.totalMs} medals={track.medals} />}
+            {result.valid && track && result.medal !== "gold" && <NextMedal totalMs={result.totalMs} medals={track.medals} />}
+            {result.signature && (
+              <a className="verified" href={`${EXPLORER_TX}${result.signature}${EXPLORER_SUFFIX}`} target="_blank" rel="noreferrer">
+                Replayed and verified on Solana — check it yourself ↗
+              </a>
+            )}
+            {!result.verified && !demoMode && (
+              <p className="muted small">
+                This run was not verified on-chain, so it earns no materials.{result.reason ? ` ${result.reason}.` : ""}
+              </p>
+            )}
 
             <div className="stats stagger">
               <Stat label="Best" value={formatTime(result.best)} />
               <Stat label="Rank" value={result.rank ? `#${result.rank}` : "—"} />
-              <Stat label="Respawns" value={finished.respawns} />
+              <Stat label="Verified" value={result.verified ? "on-chain ✓" : demoMode ? "showcase" : "no"} />
             </div>
 
             {track && <MedalLadder totalMs={finished.totalMs} medals={track.medals} />}
@@ -93,6 +108,29 @@ export function Results({
           </button>
         </div>
       </Sheet>
+    </div>
+  );
+}
+
+/// The chain replaying a run takes a few seconds and several transactions, so
+/// the player is told what is happening rather than watching a spinner.
+function Verifying({ progress }: { progress: VerifyProgress | null }) {
+  if (!progress) {
+    return <p className="muted">Checking your run…</p>;
+  }
+  const percent = progress.totalSteps > 0 ? Math.round((progress.steps / progress.totalSteps) * 100) : 0;
+  const label =
+    progress.stage === "uploading"
+      ? "Sending your inputs to Solana…"
+      : progress.stage === "replaying"
+        ? "Solana is re-driving your lap…"
+        : "Recording the result…";
+  return (
+    <div className="verifying">
+      <p className="muted">{label}</p>
+      <div className="verify-bar">
+        <span style={{ width: `${progress.stage === "replaying" ? percent : 100}%` }} />
+      </div>
     </div>
   );
 }

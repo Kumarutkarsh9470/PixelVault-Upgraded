@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { api, type RunResult, type Session } from "../lib/api";
 import { savedFrame } from "../lib/settings";
+import { trackChain, verifyRunOnChain, type VerifyProgress } from "../lib/verify";
 import type { Loadout, RaceFinished } from "../lib/unity";
 import { allItems, catalog, type Item } from "./catalog";
 import { useWallet } from "./wallet";
@@ -21,6 +22,9 @@ type GameState = {
   refresh: () => Promise<void>;
   equip: (item: Item | null, type: "chassis" | "underglow" | "trail") => void;
   submitRun: (result: RaceFinished) => Promise<RunResult>;
+  /** How far the chain has got replaying the run just finished. */
+  verifying: VerifyProgress | null;
+  clearError: () => void;
 };
 
 export const GameContext = createContext<GameState | null>(null);
@@ -40,9 +44,10 @@ function readLoadout(): Loadout {
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const { connected, wallet, owned, refreshBalances, onChange, error: walletError } = useWallet();
+  const { connected, wallet, owned, refreshBalances, onChange, sponsor, error: walletError } = useWallet();
   const [session, setSession] = useState<Session | null>(null);
   const [loadout, setLoadout] = useState<Loadout>(readLoadout);
+  const [verifying, setVerifying] = useState<VerifyProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const starterRequested = useRef(false);
 
@@ -90,32 +95,51 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
   }, [loadout, owned]);
 
-  const submitRun = useCallback(async (result: RaceFinished) => {
-    const response = await api.submitRun({
-      trackId: result.trackId,
-      totalMs: result.totalMs,
-      laps: result.laps,
-      respawns: result.respawns,
-      splits: result.splits,
-      ghost: result.ghost,
-    });
-    setSession((s) =>
-      s
-        ? {
-            ...s,
-            materials: response.materials,
-            bests: response.best != null ? { ...s.bests, [result.trackId]: response.best } : s.bests,
-          }
-        : s,
-    );
-    return response;
-  }, []);
+  const submitRun = useCallback(
+    async (result: RaceFinished) => {
+      // The chain replays the run before the server will reward it: the medal
+      // is judged on the time the program derives, not the one we report.
+      let signature: string | null = null;
+      if (wallet && trackChain(result.trackId)) {
+        try {
+          signature = await verifyRunOnChain(wallet, result.trackId, result.trace, result.steps, sponsor, setVerifying);
+        } catch (e) {
+          setError(e instanceof Error ? e.message : String(e));
+        } finally {
+          setVerifying(null);
+        }
+      }
+
+      const response = await api.submitRun({
+        trackId: result.trackId,
+        totalMs: result.totalMs,
+        laps: result.laps,
+        steps: result.steps,
+        signature,
+        splits: result.splits,
+        trace: result.trace,
+      });
+      setSession((s) =>
+        s
+          ? {
+              ...s,
+              materials: response.materials,
+              bests: response.best != null ? { ...s.bests, [result.trackId]: response.best } : s.bests,
+            }
+          : s,
+      );
+      return response;
+    },
+    [wallet, sponsor],
+  );
 
   const value: GameState = {
     ready: connected && !!session,
     session,
     loadout: effectiveLoadout,
     error: error ?? walletError,
+    verifying,
+    clearError: () => setError(null),
     refresh,
     equip,
     submitRun,
@@ -175,6 +199,9 @@ export function DemoGameProvider({ children }: { children: ReactNode }) {
     return {
       valid: true,
       reason: null,
+      verified: false,
+      totalMs: result.totalMs,
+      signature: null,
       medal,
       reward: { material, amount },
       materials,
@@ -196,6 +223,8 @@ export function DemoGameProvider({ children }: { children: ReactNode }) {
     session,
     loadout: effectiveLoadout,
     error: null,
+    verifying: null,
+    clearError: () => undefined,
     refresh: async () => undefined,
     equip,
     submitRun,

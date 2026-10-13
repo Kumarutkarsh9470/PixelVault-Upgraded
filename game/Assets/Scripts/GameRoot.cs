@@ -17,25 +17,27 @@ public class GameRoot : MonoBehaviour
     GhostPlayer ghost;
     CarController car;
     CarVisuals visuals;
-    Autopilot autopilot;
-    Rigidbody carBody;
+    SimBot bot;
     BuiltTrack track;
+    SimTrack circuit;
     TrackPayload current;
     LoadoutPayload loadout = new LoadoutPayload();
     GameObject garage;
     bool attract;
     float attractStuck;
 
-    /// True while CalibrationRunner drives; the menu attract loop stays off.
-    public bool Calibrating { get; set; }
     public CarController Car => car;
-    public Autopilot Autopilot => autopilot;
     public BuiltTrack Track => track;
+    /// The circuit the simulation runs, shared with the chain.
+    public SimTrack Circuit => circuit;
 
     void Awake()
     {
         Instance = this;
         Application.targetFrameRate = 60;
+        // The simulation advances exactly sixty times a second, and the chain
+        // replays those same steps.
+        Time.fixedDeltaTime = 1f / (float)CarSim.StepsPerSecond;
 
         Camera cam = Camera.main;
         cam.farClipPlane = Mathf.Max(cam.farClipPlane, 1400f);
@@ -54,10 +56,6 @@ public class GameRoot : MonoBehaviour
         CreateCar();
         rig.Follow(car.transform);
         speedLines.Car = car;
-        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-calibrate") >= 0)
-        {
-            gameObject.AddComponent<CalibrationRunner>();
-        }
         if (FindFirstObjectByType<WebBridge>() == null)
         {
             new GameObject("Bridge").AddComponent<WebBridge>();
@@ -74,24 +72,15 @@ public class GameRoot : MonoBehaviour
         }
     }
 
+    /// The car carries no rigidbody or collider: the simulation moves it, and
+    /// the same simulation is what the chain replays.
     void CreateCar()
     {
         var go = new GameObject("Car");
-        carBody = go.AddComponent<Rigidbody>();
-        var box = go.AddComponent<BoxCollider>();
-        // Frictionless body so the car slides along walls instead of sticking.
-        box.material = new PhysicsMaterial("Car Body")
-        {
-            dynamicFriction = 0f,
-            staticFriction = 0f,
-            bounciness = 0f,
-            frictionCombine = PhysicsMaterialCombine.Minimum,
-            bounceCombine = PhysicsMaterialCombine.Minimum,
-        };
         car = go.AddComponent<CarController>();
         visuals = go.AddComponent<CarVisuals>();
         go.AddComponent<CarEffects>();
-        autopilot = go.AddComponent<Autopilot>();
+        bot = new SimBot();
         visuals.Apply(loadout);
     }
 
@@ -106,45 +95,46 @@ public class GameRoot : MonoBehaviour
         attractStuck = car.Speed < 2f ? attractStuck + Time.deltaTime : 0f;
         if (attractStuck > 2.5f)
         {
+            // Wedged somewhere: start the lap again rather than sit there.
             attractStuck = 0f;
-            int sample = NearestSample(car.transform.position);
-            car.Teleport(track.Path.Positions[sample] + Vector3.up * 0.3f, Quaternion.LookRotation(track.Path.Forwards[sample]));
-            autopilot.Begin(track.Path, sample);
+            car.Reset();
         }
     }
 
     void StartAttract()
     {
-        if (Calibrating || track == null)
+        if (track == null)
         {
             return;
         }
         attract = true;
         attractStuck = 0f;
-        autopilot.Begin(track.Path, (track.Path.Count - 4 + track.Path.Count) % track.Path.Count);
+        car.Reset();
+        car.Bot = bot;
+        car.UseBot = true;
         car.ControlsEnabled = true;
     }
 
     void StopAttract()
     {
         attract = false;
-        autopilot.End();
+        car.UseBot = false;
     }
 
-    int NearestSample(Vector3 position)
+    /// Races the bot, recording the run like any other: a demo lap, and the
+    /// quickest way to see a verified time end to end.
+    public void BotRace(float grip)
     {
-        int best = 0;
-        float bestDistance = float.MaxValue;
-        for (int i = 0; i < track.Path.Count; i++)
+        if (circuit == null)
         {
-            float d = (track.Path.Positions[i] - position).sqrMagnitude;
-            if (d < bestDistance)
-            {
-                bestDistance = d;
-                best = i;
-            }
+            return;
         }
-        return best;
+        ReadyRace();
+        bot.Grip = FixedMath.FromFloat(grip > 0f ? grip : 30f);
+        car.Bot = bot;
+        car.UseBot = true;
+        race.Begin();
+        ghost.Play();
     }
 
     public void LoadTrack(TrackPayload payload)
@@ -163,13 +153,14 @@ public class GameRoot : MonoBehaviour
 
         current = payload;
         ApplyTheme(payload.theme ?? new ThemePayload());
-        track = TrackBuilder.Build(payload, transform);
+        circuit = BuildCircuit(payload);
+        track = TrackBuilder.Build(payload, circuit, transform);
 
         loadout = payload.loadout ?? loadout;
         visuals.Apply(loadout);
-        car.GripMultiplier = payload.theme != null && payload.theme.grip > 0f ? payload.theme.grip : 1f;
-        race.Prepare(track, car, visuals, ghost, payload.id, payload.laps);
-        ghost.Load(payload.ghost, loadout);
+        car.Load(circuit);
+        race.Prepare(circuit, car, visuals, ghost, payload.id, circuit.Laps);
+        ghost.Load(circuit, DecodeTrace(payload.ghostTrace), loadout);
         speedLines.Active = false;
 
         rig.Current = CameraRig.Mode.Orbit;
@@ -180,9 +171,93 @@ public class GameRoot : MonoBehaviour
         {
             id = payload.id,
             lengthMeters = track.Path.Length,
-            laps = payload.laps,
-            checkpoints = track.Checkpoints.Count,
+            laps = circuit.Laps,
+            checkpoints = circuit.Checkpoints.Length,
+            verifiable = payload.circuit != null,
         });
+    }
+
+    /// The circuit the page sent, which is the one the chain stores. Without
+    /// it the track is still playable, but its runs cannot be verified, so a
+    /// bare build falls back to deriving the geometry locally.
+    SimTrack BuildCircuit(TrackPayload payload)
+    {
+        CircuitPayload from = payload.circuit;
+        if (from == null || from.samples == null || from.samples.Length < 64)
+        {
+            Debug.LogWarning("No circuit data: this track cannot be verified on-chain");
+            return LocalCircuit(payload);
+        }
+
+        var pads = new SimBoostPad[from.padSamples != null ? from.padSamples.Length : 0];
+        for (int i = 0; i < pads.Length; i++)
+        {
+            pads[i] = new SimBoostPad { Sample = from.padSamples[i], Lateral = from.padLaterals[i] };
+        }
+        return new SimTrack
+        {
+            Samples = SimTrack.FromFlat(from.samples),
+            Spacing = from.spacing,
+            WallOffset = from.wallOffset,
+            Checkpoints = from.checkpoints,
+            BoostPads = pads,
+            Laps = Mathf.Max(1, from.laps),
+            StartSample = from.startSample,
+            StartHeading = (uint)from.startHeading,
+        };
+    }
+
+    /// Geometry derived on the spot, for a build running without the page.
+    SimTrack LocalCircuit(TrackPayload payload)
+    {
+        TrackPath path = TrackPath.FromFlatPoints(payload.points, 2f);
+        var samples = new SimSample[path.Count];
+        for (int i = 0; i < path.Count; i++)
+        {
+            samples[i] = new SimSample
+            {
+                X = FixedMath.FromFloat(path.Positions[i].x),
+                Z = FixedMath.FromFloat(path.Positions[i].z),
+                Fx = FixedMath.FromFloat(path.Forwards[i].x),
+                Fz = FixedMath.FromFloat(path.Forwards[i].z),
+            };
+        }
+        int count = Mathf.Max(8, Mathf.RoundToInt(path.Length / 55f));
+        var checkpoints = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            checkpoints[i] = i * path.Count / count;
+        }
+        int start = (path.Count - 4 + path.Count) % path.Count;
+        return new SimTrack
+        {
+            Samples = samples,
+            Spacing = FixedMath.FromFloat(2f),
+            WallOffset = FixedMath.FromFloat(10f),
+            Checkpoints = checkpoints,
+            BoostPads = new SimBoostPad[0],
+            Laps = Mathf.Max(1, payload.laps),
+            StartSample = start,
+            StartHeading = (uint)(long)(Mathf.Atan2(path.Forwards[start].x, path.Forwards[start].z)
+                * Mathf.Rad2Deg * SimTrig.PerDegree),
+        };
+    }
+
+    static byte[] DecodeTrace(string base64)
+    {
+        if (string.IsNullOrEmpty(base64))
+        {
+            return null;
+        }
+        try
+        {
+            return System.Convert.FromBase64String(base64);
+        }
+        catch (System.FormatException)
+        {
+            Debug.LogWarning("Ignoring a malformed ghost trace");
+            return null;
+        }
     }
 
     /// Chase camera behind the stationary car, for the page's countdown.
@@ -194,8 +269,8 @@ public class GameRoot : MonoBehaviour
         }
         ExitGarage();
         StopAttract();
-        race.Prepare(track, car, visuals, ghost, current.id, current.laps);
-        ghost.Load(current.ghost, loadout);
+        race.Prepare(circuit, car, visuals, ghost, current.id, circuit.Laps);
+        ghost.Load(circuit, DecodeTrace(current.ghostTrace), loadout);
         speedLines.Active = true;
         rig.Current = CameraRig.Mode.Chase;
         rig.Snap();
@@ -203,6 +278,7 @@ public class GameRoot : MonoBehaviour
 
     public void StartRace()
     {
+        car.UseBot = false;
         if (rig.Current != CameraRig.Mode.Chase)
         {
             ReadyRace();
@@ -218,7 +294,7 @@ public class GameRoot : MonoBehaviour
         speedLines.Active = false;
         if (track != null)
         {
-            race.Prepare(track, car, visuals, ghost, current.id, current.laps);
+            race.Prepare(circuit, car, visuals, ghost, current.id, circuit.Laps);
         }
         rig.Current = CameraRig.Mode.Orbit;
         rig.Snap();
@@ -249,7 +325,6 @@ public class GameRoot : MonoBehaviour
         ghost.Stop();
         speedLines.Active = false;
 
-        carBody.isKinematic = true;
         car.ControlsEnabled = false;
         car.transform.SetPositionAndRotation(GaragePosition + Vector3.up * 0.3f, Quaternion.Euler(0f, 150f, 0f));
         visuals.Apply(loadout);
@@ -271,7 +346,6 @@ public class GameRoot : MonoBehaviour
             return;
         }
         garage.SetActive(false);
-        carBody.isKinematic = false;
         if (track != null)
         {
             track.Root.SetActive(true);

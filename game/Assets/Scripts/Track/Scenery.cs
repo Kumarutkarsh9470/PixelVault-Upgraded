@@ -19,7 +19,7 @@ public static class Scenery
         public readonly List<Vector3> Sparse = new List<Vector3>();
     }
 
-    public static void Build(BuiltTrack track, ThemePayload theme, float railOffset, Color accent)
+    public static void Build(BuiltTrack track, SimTrack sim, ThemePayload theme, float railOffset, Color accent)
     {
         string scenery = string.IsNullOrEmpty(theme.scenery) ? "city" : theme.scenery;
         var kit = new Kit
@@ -39,7 +39,7 @@ public static class Scenery
         }
 
         Grandstands(kit);
-        BoostPads(kit);
+        BoostPads(kit, sim);
         Lamps(kit);
         switch (scenery)
         {
@@ -68,19 +68,19 @@ public static class Scenery
         }
     }
 
-    /// Glowing chevron strips on the straightest parts of three stretches of the lap.
-    static void BoostPads(Kit kit)
+    /// Glowing chevrons where the simulation's boost pads are. Driving over one
+    /// is handled by the simulation, so these are paint, not triggers.
+    static void BoostPads(Kit kit, SimTrack sim)
     {
         TrackPath path = kit.Track.Path;
         Material pad = Mats.ParticleAdditive(FxTextures.Chevron);
         Mats.Tint(pad, new Color(kit.Accent.r, kit.Accent.g, kit.Accent.b, 0.9f));
         pad.mainTextureScale = new Vector2(1f, 2f);
 
-        float[] fractions = { 0.22f, 0.55f, 0.84f };
-        for (int n = 0; n < fractions.Length; n++)
+        foreach (SimBoostPad pv in sim.BoostPads)
         {
-            int sample = Straightest(path, fractions[n] - 0.08f, fractions[n] + 0.08f);
-            float lateral = (n % 2 == 0 ? -1f : 1f) * kit.Track.Width * 0.2f;
+            int sample = pv.Sample % path.Count;
+            float lateral = FixedMath.ToFloat(pv.Lateral);
             Vector3 at = path.Positions[sample] + path.Rights[sample] * lateral + Vector3.up * 0.05f;
             Quaternion facing = Quaternion.LookRotation(path.Forwards[sample]);
 
@@ -91,14 +91,6 @@ public static class Scenery
             strip.transform.SetPositionAndRotation(at, facing * Quaternion.Euler(90f, 0f, 0f));
             strip.transform.localScale = new Vector3(4.5f, 9f, 1f);
             strip.GetComponent<Renderer>().sharedMaterial = pad;
-
-            var trigger = new GameObject("Boost Pad Trigger");
-            trigger.transform.SetParent(kit.Root, false);
-            trigger.transform.SetPositionAndRotation(at + Vector3.up * 1f, facing);
-            var box = trigger.AddComponent<BoxCollider>();
-            box.isTrigger = true;
-            box.size = new Vector3(4.5f, 3f, 9f);
-            trigger.AddComponent<BoostPad>();
         }
     }
 

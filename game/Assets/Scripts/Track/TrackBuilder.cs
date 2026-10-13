@@ -6,16 +6,18 @@ public class BuiltTrack
     public TrackPath Path;
     public GameObject Root;
     public float Width;
-    public readonly List<Checkpoint> Checkpoints = new List<Checkpoint>();
+    /// Centreline samples the circuit's checkpoints sit on, for the gantry and
+    /// trackside markers. Crossing them is the simulation's business.
     public readonly List<int> CheckpointSamples = new List<int>();
-    public Vector3 SpawnPosition;
-    public Quaternion SpawnRotation;
     public Vector3 Centroid;
 }
 
-/// Generates a complete circuit from a list of control points: ground, road,
-/// kerbs, glowing rails with invisible wall colliders, checkpoints, the start
-/// line and gantry, and themed trackside dressing.
+/// Builds what a circuit looks like: ground, road, kerbs, glowing rails, the
+/// start line and gantry, and themed trackside dressing.
+///
+/// None of it affects how the car drives. Walls, checkpoints and boost pads
+/// are part of the simulation the chain also runs, so the mesh here can change
+/// without invalidating a single recorded run.
 public static class TrackBuilder
 {
     const float Spacing = 2f;
@@ -25,10 +27,10 @@ public static class TrackBuilder
     const float WallHeight = 3f;
     const float CheckpointSpacing = 55f;
 
-    public static BuiltTrack Build(TrackPayload payload, Transform parent)
+    public static BuiltTrack Build(TrackPayload payload, SimTrack sim, Transform parent)
     {
         ThemePayload theme = payload.theme ?? new ThemePayload();
-        TrackPath path = TrackPath.FromFlatPoints(payload.points, Spacing);
+        TrackPath path = TrackPath.FromSim(sim);
         var root = new GameObject("Track " + payload.id);
         root.transform.SetParent(parent, false);
 
@@ -56,15 +58,18 @@ public static class TrackBuilder
         MakeStrip(root.transform, "Curb L", path, -half - CurbWidth, -half, 0.03f, curb, 6f);
         MakeStrip(root.transform, "Curb R", path, half, half + CurbWidth, 0.03f, curb, 6f);
 
+        // Rails mark where the simulation's walls are; they carry no colliders,
+        // because the car is kept on the circuit by the simulation itself.
         Material rail = Mats.Glow(accent);
-        MakeWall(root.transform, "Rail L", path, -railOffset, 0f, RailHeight, rail, false);
-        MakeWall(root.transform, "Rail R", path, railOffset, 0f, RailHeight, rail, false);
-        MakeWall(root.transform, "Wall L", path, -railOffset, 0f, WallHeight, null, true);
-        MakeWall(root.transform, "Wall R", path, railOffset, 0f, WallHeight, null, true);
+        MakeWall(root.transform, "Rail L", path, -railOffset, 0f, RailHeight, rail);
+        MakeWall(root.transform, "Rail R", path, railOffset, 0f, RailHeight, rail);
 
-        BuildCheckpoints(track, railOffset);
+        foreach (int sample in sim.Checkpoints)
+        {
+            track.CheckpointSamples.Add(sample);
+        }
         BuildStart(track, payload.width, railOffset);
-        Scenery.Build(track, theme, railOffset, accent);
+        Scenery.Build(track, sim, theme, railOffset, accent);
 
         StaticBatchingUtility.Combine(root);
         return track;
@@ -119,13 +124,13 @@ public static class TrackBuilder
             triangles[t + 4] = a + 2;
             triangles[t + 5] = a + 3;
         }
-        return MeshObject(parent, name, vertices, uvs, triangles, material, false);
+        return MeshObject(parent, name, vertices, uvs, triangles, material);
     }
 
     /// A vertical strip following the path, double-sided so it reads and
     /// collides from either side. Each side has its own vertices: shared
     /// vertices would average opposite normals to zero and render black.
-    static GameObject MakeWall(Transform parent, string name, TrackPath path, float offset, float y0, float y1, Material material, bool collider)
+    static GameObject MakeWall(Transform parent, string name, TrackPath path, float offset, float y0, float y1, Material material)
     {
         int n = path.Count;
         int perSide = (n + 1) * 2;
@@ -166,10 +171,10 @@ public static class TrackBuilder
             triangles[t + 10] = b + 3;
             triangles[t + 11] = b + 1;
         }
-        return MeshObject(parent, name, vertices, uvs, triangles, material, collider);
+        return MeshObject(parent, name, vertices, uvs, triangles, material);
     }
 
-    static GameObject MeshObject(Transform parent, string name, Vector3[] vertices, Vector2[] uvs, int[] triangles, Material material, bool collider)
+    static GameObject MeshObject(Transform parent, string name, Vector3[] vertices, Vector2[] uvs, int[] triangles, Material material)
     {
         var mesh = new Mesh { name = name };
         if (vertices.Length > 65000)
@@ -185,37 +190,8 @@ public static class TrackBuilder
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        // Invisible walls get a collider and no renderer.
-        if (material != null)
-        {
-            go.AddComponent<MeshRenderer>().sharedMaterial = material;
-        }
-        if (collider)
-        {
-            go.AddComponent<MeshCollider>().sharedMesh = mesh;
-        }
+        go.AddComponent<MeshRenderer>().sharedMaterial = material;
         return go;
-    }
-
-    static void BuildCheckpoints(BuiltTrack track, float railOffset)
-    {
-        TrackPath path = track.Path;
-        int count = Mathf.Max(8, Mathf.RoundToInt(path.Length / CheckpointSpacing));
-        for (int i = 0; i < count; i++)
-        {
-            int sample = i * path.Count / count;
-            var go = new GameObject("Checkpoint " + i);
-            go.transform.SetParent(track.Root.transform, false);
-            go.transform.position = path.Positions[sample] + Vector3.up * 2f;
-            go.transform.rotation = Quaternion.LookRotation(path.Forwards[sample]);
-            var box = go.AddComponent<BoxCollider>();
-            box.isTrigger = true;
-            box.size = new Vector3(railOffset * 2f + 2f, 6f, 1.5f);
-            var checkpoint = go.AddComponent<Checkpoint>();
-            checkpoint.Index = i;
-            track.Checkpoints.Add(checkpoint);
-            track.CheckpointSamples.Add(sample);
-        }
     }
 
     static void BuildStart(BuiltTrack track, float width, float railOffset)
@@ -236,10 +212,6 @@ public static class TrackBuilder
         stripe.GetComponent<Renderer>().sharedMaterial = checker;
 
         BuildGantry(track.Root.transform, start, path.Rights[0], facing, railOffset * 2f + 2f);
-
-        int spawnSample = (path.Count - 4 + path.Count) % path.Count;
-        track.SpawnPosition = path.Positions[spawnSample] + Vector3.up * 0.3f;
-        track.SpawnRotation = Quaternion.LookRotation(path.Forwards[spawnSample]);
     }
 
     /// A slim start/finish gantry: two uprights and a beam with neon trim.

@@ -1,31 +1,49 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-/// Replays a recorded run as a translucent car, interpolating between samples.
-/// Hidden until the race starts, so it never overlaps the player's car on the menu.
+/// Races an opponent's recorded run alongside the player.
+///
+/// A ghost is the opponent's inputs, not a list of positions: the same
+/// simulation is stepped with them, so what you chase is exactly the run the
+/// chain verified, in a few hundred bytes rather than a few thousand.
 public class GhostPlayer : MonoBehaviour
 {
-    GhostPayload ghost;
-    float time;
+    SimTrack track;
+    List<SimInput> inputs;
+    CarSim car;
+    int step;
     bool playing;
     GameObject model;
 
-    public bool HasGhost => ghost != null && ghost.samples != null && ghost.samples.Length >= 8;
-    public bool Visible => playing && model != null && model.activeSelf;
+    Vector3 previousPosition;
+    Vector3 currentPosition;
+    float previousYaw;
+    float currentYaw;
 
-    public void Load(GhostPayload payload, LoadoutPayload loadout)
+    public bool HasGhost => inputs != null && inputs.Count > 0;
+    public bool Visible => playing && model != null && model.activeSelf;
+    /// The ghost's finish time so far, in steps, for live split comparisons.
+    public int Steps => step;
+
+    public void Load(SimTrack simTrack, byte[] trace, LoadoutPayload loadout)
     {
-        ghost = payload;
+        track = simTrack;
+        inputs = trace != null && trace.Length >= 2 ? TraceCodec.Decode(trace) : null;
         playing = false;
-        time = 0f;
+        step = 0;
         if (model != null)
         {
             Destroy(model);
             model = null;
         }
-        if (!HasGhost)
+        if (!HasGhost || track == null)
         {
             return;
         }
+
+        car = CarSim.Spawn(track);
+        previousPosition = currentPosition = Position();
+        previousYaw = currentYaw = Yaw();
 
         model = Props.Spawn("CarKit/" + (string.IsNullOrEmpty(loadout?.chassis) ? "race" : loadout.chassis), transform, CarVisuals.CarLength, Props.Axis.Z);
         foreach (var c in model.GetComponentsInChildren<Collider>())
@@ -44,7 +62,7 @@ public class GhostPlayer : MonoBehaviour
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
         model.SetActive(false);
-        Pose(0f);
+        Place(1f);
     }
 
     public void Play()
@@ -53,9 +71,12 @@ public class GhostPlayer : MonoBehaviour
         {
             return;
         }
+        car = CarSim.Spawn(track);
+        step = 0;
         playing = true;
-        time = 0f;
         model.SetActive(true);
+        previousPosition = currentPosition = Position();
+        previousYaw = currentYaw = Yaw();
     }
 
     public void Stop()
@@ -64,32 +85,49 @@ public class GhostPlayer : MonoBehaviour
         if (model != null) model.SetActive(false);
     }
 
-    void Update()
+    /// Stepped in lockstep with the player, so both cars see the same clock.
+    void FixedUpdate()
     {
         if (!playing)
         {
             return;
         }
-        time += Time.deltaTime;
-        Pose(time);
+        if (step >= inputs.Count)
+        {
+            // Its run is over: the ghost leaves rather than parking on the line.
+            Stop();
+            return;
+        }
+        previousPosition = currentPosition;
+        previousYaw = currentYaw;
+        car.Step(track, inputs[step]);
+        step++;
+        currentPosition = Position();
+        currentYaw = Yaw();
     }
 
-    void Pose(float t)
+    void Update()
     {
-        int count = ghost.samples.Length / 4;
-        float f = t / ghost.interval;
-        int i = Mathf.Clamp(Mathf.FloorToInt(f), 0, count - 1);
-        int j = Mathf.Min(i + 1, count - 1);
-        float blend = Mathf.Clamp01(f - i);
-
-        Vector3 a = new Vector3(ghost.samples[i * 4], ghost.samples[i * 4 + 1], ghost.samples[i * 4 + 2]);
-        Vector3 b = new Vector3(ghost.samples[j * 4], ghost.samples[j * 4 + 1], ghost.samples[j * 4 + 2]);
-        float yaw = Mathf.LerpAngle(ghost.samples[i * 4 + 3], ghost.samples[j * 4 + 3], blend);
-        transform.SetPositionAndRotation(Vector3.Lerp(a, b, blend), Quaternion.Euler(0f, yaw, 0f));
-        if (i >= count - 1)
+        if (playing)
         {
-            // Finished its run: fade out rather than sit on the finish line.
-            Stop();
+            Place(Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime));
         }
+    }
+
+    void Place(float blend)
+    {
+        transform.SetPositionAndRotation(
+            Vector3.Lerp(previousPosition, currentPosition, blend),
+            Quaternion.Euler(0f, Mathf.LerpAngle(previousYaw, currentYaw, blend), 0f));
+    }
+
+    Vector3 Position()
+    {
+        return new Vector3(FixedMath.ToFloat(car.X), 0.3f, FixedMath.ToFloat(car.Z));
+    }
+
+    float Yaw()
+    {
+        return car.Heading / 4294967296f * 360f;
     }
 }

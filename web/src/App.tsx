@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 
 import { Aurora, NavIcon, Particles, useTilt } from "./components/Fx";
+import circuits from "./data/circuits.json";
 import { UnityStage } from "./components/UnityStage";
 import { demoMode } from "./lib/demo";
 import type { RunResult } from "./lib/api";
@@ -41,7 +42,10 @@ function trackPayload(track: Track, loadout: Loadout, opponent: Opponent | null)
     width: track.width,
     points: track.points,
     theme: track.theme,
-    ghost: opponent?.ghost ?? null,
+    // The circuit the Solana program stores: the game races the same geometry
+    // the chain replays a run against.
+    circuit: (circuits as Record<string, unknown>)[track.id] ?? null,
+    ghostTrace: opponent?.trace ?? null,
     loadout,
   };
 }
@@ -157,7 +161,7 @@ export default function App() {
         .then((r) => {
           setResult(r);
           if (r.valid && r.personalBest) {
-            savePersonalBest(race.trackId, { totalMs: race.totalMs, splits: race.splits, ghost: race.ghost });
+            savePersonalBest(race.trackId, { totalMs: race.totalMs, splits: race.splits, trace: race.trace });
             void leader(race.trackId, true).then((l) => setLeaderOpponent(l));
           }
           if (r.reward.amount > 0) sfx.reward();

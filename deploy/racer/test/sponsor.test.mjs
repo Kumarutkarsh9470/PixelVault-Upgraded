@@ -78,19 +78,19 @@ test("refuses draining the sponsor with a transfer", () => {
 
 test("refuses a priority fee the sponsor would pay", () => {
   const fee = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1_000_000_000 });
-  assert.match(check(tx([fee, ed25519(), craft()])).reason, /not sponsored/);
+  assert.match(check(tx([fee, ed25519(), craft()])).reason, /only a compute unit limit/);
 });
 
 test("refuses the sponsor in any role but craft's rent payer", () => {
   const memo = new TransactionInstruction({ programId: MEMO, keys: [acct(player.publicKey, true, false), acct(sponsor.publicKey, true, true)], data: Buffer.from("x") });
-  assert.match(check(tx([memo, ed25519(), craft()])).reason, /rent payer of craft/);
+  assert.match(check(tx([memo, ed25519(), craft()])).reason, /never act as a player/);
   const signed = new TransactionInstruction({ programId: MEMO, keys: [acct(player.publicKey, true, false)], data: Buffer.from("x") });
-  assert.match(check(tx([signed, transferChecked({ authority: sponsor.publicKey })])).reason, /rent payer of craft/);
+  assert.match(check(tx([signed, transferChecked({ authority: sponsor.publicKey })])).reason, /never act as a player/);
 });
 
 test("refuses anything that is not craft or redeem in PixelVault", () => {
   const register = new TransactionInstruction({ programId: PROGRAM, keys: [acct(player.publicKey, true, true)], data: disc("register_game") });
-  assert.match(check(tx([register])).reason, /only craft and redeem/);
+  assert.match(check(tx([register])).reason, /only craft, redeem and run verification/);
 });
 
 test("refuses transactions with nothing to sponsor", () => {
@@ -127,4 +127,28 @@ test("withdrawals: USDC only, TransferChecked only, at least the minimum, on the
 
 test("one craft and one redeem per transaction", () => {
   assert.match(check(tx([ed25519(8), craft(sponsor.publicKey, 2), ed25519(8), craft(sponsor.publicKey, 2)])).reason, /one craft/);
+});
+
+const run = (name, keys) => new TransactionInstruction({ programId: PROGRAM, keys, data: Buffer.concat([disc(name), Buffer.alloc(8)]) });
+const openRun = () => run("open_run", [acct(sponsor.publicKey, true, true), acct(player.publicKey, true, false), ...filler(3)]);
+const writeRun = () => run("write_run", [acct(player.publicKey, true, false), ...filler(1)]);
+const verifyRun = () => run("verify_run", [acct(player.publicKey, true, false), ...filler(3)]);
+const closeRun = () => run("close_run", [acct(player.publicKey, true, false), acct(Keypair.generate().publicKey), acct(sponsor.publicKey)]);
+
+test("sponsors run verification: open, write, verify with a compute limit, close", () => {
+  assert.equal(check(tx([openRun(), writeRun()])).kind, "verify");
+  assert.equal(check(tx([writeRun()])).kind, "verify");
+  assert.equal(check(tx([ComputeBudgetProgram.setComputeUnitLimit({ units: 1_350_000 }), verifyRun()])).kind, "verify");
+  assert.equal(check(tx([closeRun()])).kind, "verify");
+});
+
+test("compute budget: only a unit limit under the ceiling, never a price", () => {
+  assert.match(check(tx([ComputeBudgetProgram.setComputeUnitLimit({ units: 2_000_000 }), verifyRun()])).reason, /ceiling/);
+  assert.match(check(tx([ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }), verifyRun()])).reason, /unit limit/);
+});
+
+test("run verification is sent on its own, and the sponsor only where the program expects it", () => {
+  assert.match(check(tx([craft(), ed25519(), verifyRun()])).reason, /on its own/);
+  const sponsorAsPlayer = run("verify_run", [acct(sponsor.publicKey, true, false), ...filler(3)]);
+  assert.match(check(tx([writeRun(), sponsorAsPlayer])).reason, /never act as a player/);
 });

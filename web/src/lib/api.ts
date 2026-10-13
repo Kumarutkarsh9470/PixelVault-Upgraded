@@ -12,6 +12,12 @@ export type Session = {
 export type RunResult = {
   valid: boolean;
   reason: string | null;
+  /** Whether the Solana program replayed this run and agreed with it. */
+  verified: boolean;
+  /** The time the program derived, which is what the medal was judged on. */
+  totalMs: number;
+  /** The transaction that verified it, for anyone who wants to check. */
+  signature: string | null;
   medal: Medal;
   reward: { material: string; amount: number };
   materials: Record<string, number>;
@@ -35,7 +41,8 @@ export type LeaderGhost = {
   name: string;
   totalMs: number;
   splits: number[];
-  ghost: { interval: number; samples: number[] };
+  /** The leader's inputs, base64, for racing their line. */
+  trace: string;
 };
 
 export type LeaderboardEntry = { rank: number; name: string; frame: string | null; totalMs: number; at: string };
@@ -60,10 +67,12 @@ export const api = {
   submitRun: (run: {
     trackId: string;
     totalMs: number;
+    steps: number;
     laps: number;
-    respawns: number;
     splits: number[];
-    ghost: { interval: number; samples: number[] };
+    trace: string;
+    /** The transaction in which the chain replayed this run. */
+    signature: string | null;
   }) =>
     call<RunResult>("/api/run", run),
   /** Each game's own server signs grants for its items: Neon Racer here, Glyph Forge under /api/glyph. */

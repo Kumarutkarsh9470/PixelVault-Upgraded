@@ -7,3 +7,7 @@ export const RPC_WS_URL = "wss://api.devnet.solana.com";
 
 /** Relayer that co-signs as fee payer, so players never need SOL. */
 export const SPONSOR_API = "/api/sponsor";
+
+/** Where a player can see a verification transaction for themselves. */
+export const EXPLORER_TX = "https://explorer.solana.com/tx/";
+export const EXPLORER_SUFFIX = "?cluster=devnet";
