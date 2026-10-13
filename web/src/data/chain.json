@@ -82,5 +82,22 @@
         }
       }
     }
+  },
+  "tracks": {
+    "neon-harbor": {
+      "trackId": 1,
+      "track": "99yqKwTQJKG4GmA4fRbx68G7XiiEvkZEhgdCiZGaF1wr",
+      "leaderboard": "HtX3HsnKh2faqLC9uXqRnEtHBLBbyBP9qQmerhxUEELB"
+    },
+    "dune-rush": {
+      "trackId": 2,
+      "track": "rttSwQnmNySyVKsHMyFk1SztEEqf31afd2pJuuGG7AB",
+      "leaderboard": "7y2SxuBKRjdu2hvfxLzU3mbKvKuqGVK4U1NcbmpiQi8e"
+    },
+    "frostline": {
+      "trackId": 3,
+      "track": "J5rigfaTRa2iKACwHSFZCNVqNdLCQGRBT6XyzaxrYz53",
+      "leaderboard": "DDyp94qu3pno7zuJDr5rfaTjnHdL8exSwpzwiUmcLatU"
+    }
   }
 }

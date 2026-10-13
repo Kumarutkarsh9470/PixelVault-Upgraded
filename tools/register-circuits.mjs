@@ -77,8 +77,13 @@ function trackArgs(id, circuit) {
   ]);
 }
 
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function send(instructions, description) {
   const tx = new Transaction().add(...instructions);
+  // The public RPC rate-limits bursts; a short gap between the many sample
+  // uploads keeps a registration inside its budget.
+  await pause(Number(process.env.SEND_GAP_MS || 1500));
   const signature = await sendAndConfirmTransaction(connection, tx, [admin], {
     commitment: "confirmed",
   });
@@ -92,8 +97,9 @@ async function register(id, circuit, trackId) {
   const leaderboard = pda([Buffer.from("board"), admin.publicKey.toBuffer(), u64(trackId)]);
 
   const existing = await connection.getAccountInfo(track);
-  // Byte 95 of the account body is `frozen`; see sim::account::TrackConfig.
-  const frozen = existing ? existing.data[8 + 94] === 1 : false;
+  // Byte 93 of the account body is `frozen` (authority 32, track_id 8, name 32,
+  // spacing 4, wall_offset 4, start_heading 4, four u16s, laps 1); see sim::account::TrackConfig.
+  const frozen = existing ? existing.data[8 + 93] === 1 : false;
   if (frozen) {
     console.log(`${id}: already registered and frozen`);
     return { trackId, track: track.toBase58(), leaderboard: leaderboard.toBase58() };
