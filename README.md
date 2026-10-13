@@ -27,7 +27,7 @@ You can check the claim yourself in about ninety seconds:
 
 | | |
 |---|---|
-| **Play** | [t.me/pixelvault_racer_bot](https://t.me/pixelvault_racer_bot/race), or [pixelvault-racer.vercel.app](https://pixelvault-racer.vercel.app) in a browser |
+| **Play** | [t.me/pixelvault_racer_bot](https://t.me/pixelvault_racer_bot/race) for the real thing, or [pixelvault-racer.vercel.app](https://pixelvault-racer.vercel.app) in any browser: outside Telegram the site runs in showcase mode on a demo wallet, so every screen and both games are playable without signing in |
 | **Program** | [`AANvcGam…zNsuoZ`](https://explorer.solana.com/address/AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ?cluster=devnet) on devnet |
 | **Threat model** | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md): every attack we considered, its defence, and the test that proves it |
 | **Run locally** | `node tools/serve-web.mjs deploy/racer 8091` → http://localhost:8091 |
