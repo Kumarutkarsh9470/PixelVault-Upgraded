@@ -32,7 +32,7 @@ You can check the claim yourself in about ninety seconds:
 | **Threat model** | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md): every attack we considered, its defence, and the test that proves it |
 | **Run locally** | `node tools/serve-web.mjs deploy/racer 8091` → http://localhost:8091 |
 | **Second game** | [Glyph Forge](#4-glyph-forge-does-value-really-move-between-games): an endless runner from a separate studio, built only on the SDK, every run replayed on the server |
-| **Studio SDK** | [`sdk/`](sdk): sign grants, build craft/redeem/route transactions, cash out. [Integration guide](sdk/README.md) |
+| **Studio SDK** | [`sdk/`](sdk): `npx pixelvault setup` registers a game and its items from a catalog file; builders for grants, craft/redeem/route, studio operations and cash-out; `createSponsor` is the fee-payer relayer with its rules built in. [Quickstart](sdk/README.md) |
 | **Tests** | 12 program tests, SDK tests against the compiled program, relayer and run-replay tests, the runner's C# checked against the server's rules: all in [CI](.github/workflows/ci.yml) on every push |
 
 Built for the **Colosseum Crypto World's Fair** hackathon, Solana track.

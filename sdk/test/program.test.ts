@@ -34,6 +34,10 @@ import { FailedTransactionMetadata, LiteSVM } from "litesvm";
 
 import {
   associatedTokenAddress,
+  createItemClassInstruction,
+  itemClassPda,
+  registerGameInstruction,
+  updateGameInstruction,
   ASSOCIATED_TOKEN_PROGRAM,
   craftInstructions,
   createGrantSigner,
@@ -175,38 +179,30 @@ class World {
     const treasury = (await generateKeyPairSigner()).address;
     this.setTokenAccount(treasury, this.usdcMint, studio.address, 0n);
     await this.ok(studio, [
-      {
-        programAddress: PROGRAM_ID,
-        accounts: [
-          ws(studio.address),
-          r(this.deployment.protocol as Address),
-          w(game),
-          r(this.usdcMint),
-          w(vault),
-          r(treasury),
-          r(TOKEN_PROGRAM),
-          r(ASSOCIATED_TOKEN_PROGRAM),
-          r(SYSTEM_PROGRAM),
-        ],
-        data: concat(discriminator("register_game"), u64(gameId), borshString(name), addressBytes(this.grantSigner.address), u64(0)),
-      },
+      await registerGameInstruction(this.deployment, {
+        authority: studio.address,
+        gameId,
+        name,
+        grantSigner: this.grantSigner.address,
+        treasury,
+      }),
     ]);
 
     const deployed: Deployment["games"][string] = { game, vault, treasury, classes: {} };
     for (const c of classes) {
       const mint = await generateKeyPairSigner();
-      const [itemClass] = await getProgramDerivedAddress({
-        programAddress: PROGRAM_ID,
-        seeds: [new TextEncoder().encode("class"), addressBytes(game), u64(c.classId)],
-      });
+      const itemClass = await itemClassPda(PROGRAM_ID, game, c.classId);
       await this.ok(
         studio,
         [
-          {
-            programAddress: PROGRAM_ID,
-            accounts: [ws(studio.address), r(game), w(itemClass), ws(mint.address), r(TOKEN_2022_PROGRAM), r(SYSTEM_PROGRAM)],
-            data: concat(discriminator("create_item_class"), u64(c.classId), u64(c.price), u16(c.backingBps), u64(0)),
-          },
+          await createItemClassInstruction(this.deployment, {
+            authority: studio.address,
+            gameId,
+            classId: c.classId,
+            mint: mint.address,
+            price: c.price,
+            backingBps: c.backingBps,
+          }),
         ],
         [mint],
       );
@@ -349,12 +345,8 @@ test("a studio rotates its grant signer with update_game, and the old key's gran
   const fresh: GrantSigner = { address: await getAddressFromPublicKey(keys.publicKey), keys };
 
   // update_game(crafting_paused: None, grant_signer: Some(fresh), backed_cap: None), as tools/setup-devnet.mjs sends it.
-  await world.ok(studio, [
-    {
-      programAddress: PROGRAM_ID,
-      accounts: [rs(studio.address), w(game)],
-      data: concat(discriminator("update_game"), Uint8Array.of(0, 1), addressBytes(fresh.address), Uint8Array.of(0)),
-    },
+  await world.ok(world.studios[1], [
+    await updateGameInstruction(world.deployment, { authority: world.studios[1].address, gameId: 1, grantSigner: fresh.address }),
   ]);
 
   const stale = await craft(world, 2, 1);

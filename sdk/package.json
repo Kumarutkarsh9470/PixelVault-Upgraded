@@ -1,10 +1,26 @@
 {
   "name": "@pixelvault/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Integrate USDC-backed, refundable items from the PixelVault Solana program into a game",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kumarutkarsh9470/PixelVault-Upgraded.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/tree/main/sdk#readme",
+  "keywords": [
+    "solana",
+    "games",
+    "usdc",
+    "anchor",
+    "token-2022"
+  ],
   "type": "module",
   "main": "./dist/index.js",
+  "bin": {
+    "pixelvault": "./dist/cli.js"
+  },
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -13,7 +29,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
