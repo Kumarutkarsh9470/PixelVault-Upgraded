@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { Confetti } from "../components/Fx";
 import { formatTime } from "../lib/api";
 import { setEngine, sfx, startEngine, stopEngine } from "../lib/audio";
 import type { Opponent } from "../lib/opponents";
@@ -150,25 +151,23 @@ export function Race({
   return (
     <div className="screen race">
       <div className="hud">
-        <div className="hud-lap">
-          <small>LAP</small>
-          <b>
-            {lap}
-            <span>/{laps}</span>
-          </b>
-        </div>
+        <LapRing lap={lap} laps={laps} />
         <div className="hud-center">
           <div className="hud-time">{formatTime(hud?.timeMs ?? 0)}</div>
           {opponent && (
-            <div className={`hud-delta ${delta == null ? "" : delta < 0 ? "ahead" : "behind"}`}>
+            <div key={delta ?? "none"} className={`hud-delta ${delta == null ? "" : delta < 0 ? "ahead" : "behind"}`}>
               <span>{opponent.name}</span>
-              <b>{delta == null ? formatTime(opponent.totalMs) : formatDelta(delta)}</b>
+              <b>
+                {delta != null && <i aria-hidden>{delta < 0 ? "▲" : "▼"}</i>}
+                {delta == null ? formatTime(opponent.totalMs) : formatDelta(delta)}
+              </b>
             </div>
           )}
         </div>
         <Minimap track={track} hud={hud} />
       </div>
 
+      <SpeedLines hud={hud} />
       <Speedometer hud={hud} />
 
       {go !== null && (
@@ -195,7 +194,7 @@ export function Race({
           ) : (
             <>
               <span>◀ Hold left</span>
-              <span>Add the other thumb to drift</span>
+              <span>Both thumbs to drift · release to boost</span>
               <span>Hold right ▶</span>
             </>
           )}
@@ -204,6 +203,7 @@ export function Race({
 
       {finish && (
         <div className="finish">
+          <Confetti pieces={26} />
           <div className="finish-flag" />
           <h1>FINISH</h1>
           <div className="finish-time">{formatTime(finish.totalMs)}</div>
@@ -250,9 +250,33 @@ function Speedometer({ hud }: { hud: Hud | null }) {
   const r2 = 42;
   const arc2 = Math.PI * 1.5 * r2;
   const state = hud?.boost ? "boost" : hud?.drift ? "drift" : "";
+  const ticks = Array.from({ length: 13 }, (_, i) => 135 + (i * 270) / 12);
   return (
-    <div className={`speedo ${state}`}>
+    <div className={`speedo ${state}`} style={{ ["--v" as string]: speedFrac }}>
       <svg viewBox="0 0 130 130" width={130} height={130} aria-hidden>
+        <defs>
+          <linearGradient id="sp-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#22d3ee" />
+            <stop offset="0.6" stopColor="#8b5cf6" />
+            <stop offset="1" stopColor="#f472b6" />
+          </linearGradient>
+          <linearGradient id="sp-boost" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#fde68a" />
+            <stop offset="1" stopColor="#f59e0b" />
+          </linearGradient>
+        </defs>
+        <g className="sp-ticks">
+          {ticks.map((a, i) => (
+            <line
+              key={a}
+              x1={65 + 60 * Math.cos((a * Math.PI) / 180)}
+              y1={65 + 60 * Math.sin((a * Math.PI) / 180)}
+              x2={65 + (i % 3 === 0 ? 55 : 57.5) * Math.cos((a * Math.PI) / 180)}
+              y2={65 + (i % 3 === 0 ? 55 : 57.5) * Math.sin((a * Math.PI) / 180)}
+              className={i / 12 <= speedFrac ? "lit" : ""}
+            />
+          ))}
+        </g>
         <g transform="rotate(135 65 65)">
           <circle cx={65} cy={65} r={r} className="sp-track" strokeDasharray={`${arc} 999`} />
           <circle cx={65} cy={65} r={r} className="sp-fill" strokeDasharray={`${arc * speedFrac} 999`} />
@@ -267,4 +291,34 @@ function Speedometer({ hud }: { hud: Hud | null }) {
       <div className="sp-label">{hud?.boost ? "BOOST" : hud?.drift ? "DRIFT" : ""}</div>
     </div>
   );
+}
+
+/** Lap counter inside a ring that fills a segment per lap. */
+function LapRing({ lap, laps }: { lap: number; laps: number }) {
+  const r = 22;
+  const c = 2 * Math.PI * r;
+  const frac = laps > 0 ? Math.min(1, (lap - 1) / laps) : 0;
+  return (
+    <div className="hud-lap">
+      <svg viewBox="0 0 56 56" width={56} height={56} aria-hidden>
+        <circle cx={28} cy={28} r={r} className="lap-track" />
+        <circle cx={28} cy={28} r={r} className="lap-fill" strokeDasharray={`${c * frac} ${c}`} transform="rotate(-90 28 28)" />
+      </svg>
+      <div className="hud-lap-text">
+        <small>LAP</small>
+        <b>
+          {lap}
+          <span>/{laps}</span>
+        </b>
+      </div>
+    </div>
+  );
+}
+
+/** Motion streaks at the edges of the view that thicken with speed and flare on boost. */
+function SpeedLines({ hud }: { hud: Hud | null }) {
+  const v = Math.min(1, (hud?.speedKmh ?? 0) / TOP_KMH);
+  const strength = hud?.boost ? 1 : Math.max(0, (v - 0.45) / 0.55);
+  if (strength <= 0) return null;
+  return <div className={`speed-lines ${hud?.boost ? "boost" : ""}`} style={{ opacity: strength }} aria-hidden />;
 }

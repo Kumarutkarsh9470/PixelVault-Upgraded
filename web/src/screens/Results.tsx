@@ -66,8 +66,13 @@ export function Results({
               <Stat label="Respawns" value={finished.respawns} />
             </div>
 
+            {track && <MedalLadder totalMs={finished.totalMs} medals={track.medals} />}
+            {opponent && opponent.splits.length > 0 && finished.splits.length > 0 && (
+              <SectorBars mine={finished.splits} theirs={opponent.splits} name={opponent.name} />
+            )}
+
             {result.reward.amount > 0 ? (
-              <div className="reward">
+              <div className="reward pop-in">
                 <span className="muted">Earned</span>
                 <MaterialChip id={result.reward.material} amount={result.reward.amount} />
               </div>
@@ -100,5 +105,68 @@ function NextMedal({ totalMs, medals }: { totalMs: number; medals: { gold: numbe
       {((totalMs - medals[next]) / 1000).toFixed(2)}s from <b className={`text-${next}`}>{next}</b> — drift through the
       long corners and hit the boost pads.
     </p>
+  );
+}
+
+/** Where this time sits between the three medal thresholds. */
+function MedalLadder({ totalMs, medals }: { totalMs: number; medals: { gold: number; silver: number; bronze: number } }) {
+  const lo = medals.gold * 0.92;
+  const hi = medals.bronze * 1.12;
+  const pos = (ms: number) => `${Math.min(100, Math.max(0, ((ms - lo) / (hi - lo)) * 100)).toFixed(1)}%`;
+  const tier = totalMs <= medals.gold ? "gold" : totalMs <= medals.silver ? "silver" : totalMs <= medals.bronze ? "bronze" : "none";
+  return (
+    <div className={`ladder ladder-${tier}`}>
+      <div className="ladder-track">
+        <i style={{ width: pos(totalMs) }} />
+        {(["gold", "silver", "bronze"] as const).map((m) => (
+          <b key={m} className={`ladder-mark mark-${m}`} style={{ left: pos(medals[m]) }} title={`${m}: ${formatTime(medals[m])}`} />
+        ))}
+        <span className="ladder-you" style={{ left: pos(totalMs) }} />
+      </div>
+      <div className="ladder-labels">
+        <span className="text-gold">Gold {formatTime(medals.gold)}</span>
+        <span className="text-silver">Silver {formatTime(medals.silver)}</span>
+        <span className="text-bronze">Bronze {formatTime(medals.bronze)}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Per-checkpoint gap to the opponent: green bars where you gained, red where you lost. */
+function SectorBars({ mine, theirs, name }: { mine: number[]; theirs: number[]; name: string }) {
+  const count = Math.min(mine.length, theirs.length);
+  if (count === 0) return null;
+  // Long tracks have a checkpoint every few seconds; show at most twelve sectors.
+  const per = Math.ceil(count / 12);
+  const n = Math.ceil(count / per);
+  const sectors = Array.from({ length: n }, (_, i) => {
+    const end = Math.min(count, (i + 1) * per) - 1;
+    const start = i * per;
+    const prevMine = start === 0 ? 0 : mine[start - 1];
+    const prevTheirs = start === 0 ? 0 : theirs[start - 1];
+    return mine[end] - prevMine - (theirs[end] - prevTheirs);
+  });
+  const max = Math.max(400, ...sectors.map((d) => Math.abs(d)));
+  const gained = sectors.filter((d) => d < 0).length;
+  return (
+    <div className="sectors">
+      <div className="sectors-head">
+        <span className="eyebrow">Sectors vs {name}</span>
+        <span className="muted small">
+          faster in {gained} of {n}
+        </span>
+      </div>
+      <div className="sector-list">
+        {sectors.map((d, i) => (
+          <div key={i} className={`sector ${d < 0 ? "ahead" : d > 0 ? "behind" : "even"}`} style={{ ["--i" as string]: i }}>
+            <span className="sector-label">S{i + 1}</span>
+            <span className="sector-bar">
+              <i style={{ width: `${(Math.min(Math.abs(d), max) / max) * 50}%` }} />
+            </span>
+            <span className="sector-delta">{formatDelta(d)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
