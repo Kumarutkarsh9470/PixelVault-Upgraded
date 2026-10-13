@@ -31,23 +31,31 @@ Colosseum asks for two videos: a presentation of two to three minutes, which jud
 **2:20 Close.**
 "PixelVault. In-game purchases you can refund. [your name], building from India."
 
-## Demo video (target 2:45, no slides, phone screen recording)
+## Demo video (2:50, live product only, every screen)
 
-Record in Telegram with a fresh account if you can, so the starter USDC and the first craft show up. Narrate over the recording afterwards.
+The form says: live product, not slides, not code. So the whole video is a screen recording of the Mini App on your phone, with one short desktop shot at the end. No title card, no slides, no editor. Narrate over the footage afterwards. Each row is one navigation; keep the on-screen time to the seconds given and it lands under three minutes.
 
-| Time | On screen | Say |
-|---|---|---|
-| 0:00 | Open t.me/pixelvault_racer_bot, tap Race. Login completes with no seed phrase. | "Telegram login. The wallet is created for you. You hold no SOL, ever." |
-| 0:15 | Home: three tracks, USDC pill shows 2.00 after the starter grant. | "New players get two test dollars. Every price on this screen is in dollars." |
-| 0:25 | Race one lap on Neon Harbor against the Nova ghost. Drift, boost, cross the line. | "A real game first. Drift to charge a boost, race the rival's ghost." |
-| 0:55 | Results: medal and materials awarded. | "A medal pays materials. Materials only unlock crafting; they are not money." |
-| 1:05 | Garage: hover an item, point at the price and the refund value. | "Every card shows two numbers. The price, and what you get back if you redeem." |
-| 1:15 | Craft Cyan Pulse. No wallet popup. The car shows the underglow. | "One tap. The server signs a grant, the wallet signs silently, the relayer pays the fee." |
-| 1:30 | Vault: holdings and Refundable value. Scroll to the live solvency panel. | "This panel reads every vault from the chain, not from our database. Every vault covers what it owes." |
-| 1:45 | Press Redeem. The item burns and USDC rises. | "Redeem. The item is gone and the backing is back in my wallet. No buyer, no studio approval." |
-| 2:00 | Vault: Move to another game on an item, pick a Glyph Forge frame, confirm. | "Or move the value to another game. One transaction, at par." |
-| 2:15 | Open Glyph Forge. The frame shows on the name. Play a short run. | "Glyph Forge is a second studio's game. It knows I own the frame because it reads the chain." |
-| 2:35 | Explorer: the program address and a craft transaction. | "Everything you saw is on Solana devnet. The repository has the tests and the threat model." |
+Before recording: a fresh Telegram account or a wallet with no items, so the starter grant and the first craft show. Do Not Disturb on. Brightness high. Keep the Telegram top bar in frame.
+
+| Time | Navigate to | Show | Say |
+|---|---|---|---|
+| 0:00 | Telegram chat with the bot, tap **Race** | The Mini App opens, boot screen with the spinner and tips, then the sign-in card. Tap Sign in. | "This is PixelVault, a Telegram Mini App on Solana. Login creates my wallet. No seed phrase, no SOL." |
+| 0:12 | **Home** | The 3D track behind the panel. Swipe through the three track tabs, point at the medal targets and the USDC pill reading $2.00. | "Three tracks, each with medal times. New players get two test dollars. Everything is priced in dollars." |
+| 0:24 | **Race against** row | Tap Nova, then Leader. | "I can race the calibrated rival, the current leader's recorded line, or my own best." |
+| 0:30 | Tap **RACE** | Start lights, GO, then drive one full lap: drift a corner, boost out, overtake the ghost. Keep the HUD visible: lap ring, time, delta pill, speedometer. | "A real racing game first. Drift to charge a boost. The delta shows me against the ghost in real time." |
+| 1:00 | Finish | Finish overlay with confetti, then the **Results** sheet: medal reveal, the medal ladder, sector bars, and the earned material chip. Scroll once. | "Medal. Where my time sits against gold, silver and bronze. Sector by sector against the rival. And I earned a material." |
+| 1:15 | **Garage** (bottom nav) | The car on the turntable. Tap Underglow, tap Cyan Pulse: the car lights up. Point at price, locked share and refund on the backing meter. | "Every item shows two numbers before I pay: the price and what I get back. Seventy percent of this one is locked as USDC." |
+| 1:30 | Tap **Craft** | No wallet popup. Balance drops, the item shows ×1, Equip appears. | "One tap. My wallet signs silently, a relayer pays the fee, and the backing goes into a vault the studio cannot touch." |
+| 1:42 | **Vault** (bottom nav) | Refundable value counts up. The holding card with its backing meter. | "This is my money, held by the program. Refundable value: twenty-one cents." |
+| 1:50 | Tap **Redeem** | Item disappears, USDC rises. | "Redeem. No buyer, no studio approval. The item burns and the USDC is back. This works even if the studio shuts down." |
+| 2:00 | Craft one more in Garage, back to Vault, tap **Move to another game**, pick a Glyph Forge frame | The route options with the top-up amount; confirm. | "Or move the value to another game, at par, in one transaction." |
+| 2:12 | Scroll to **Protocol, live from the chain** | The solvency bars for both games. | "Every vault, what it owes, read straight from Solana. Fully covered." |
+| 2:20 | **Ranks** (bottom nav) | The podium and the list with gaps to the leader. | "Leaderboards, with the frame I just moved shown on my name." |
+| 2:27 | Home → **Glyph Forge** link | Glyph Forge menu, tap **Run**, play ten seconds, crash, results with runes. Tap **Forge**, show the frames with their backing meters. | "A second game, from a second studio, built only on the public SDK. Same wallet. Every run is replayed on the server." |
+| 2:42 | Desktop browser, pixelvault-racer.vercel.app | The showcase banner and the home screen on a laptop. | "Judges can open it in any browser in showcase mode. The code, the SDK on npm, and the tests are on GitHub." |
+| 2:50 | End on the Vault screen in Telegram | | "PixelVault. In-game purchases you can refund." |
+
+If a transaction takes a few seconds, keep rolling and trim the wait in the edit rather than cutting mid-animation. If you run long, cut the Ranks row and the desktop shot first; the race, craft and redeem are the ones that matter.
 
 ## Recording notes
 
