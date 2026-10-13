@@ -1,10 +1,10 @@
 // Glyph Forge: accepts a finished run's inputs, replays them on the run's seed,
 // and pays out the runes the replay actually collected, up to the daily cap.
-import { sql } from "../_lib/db.js";
-import { HttpError, readBody, route } from "../_lib/http.js";
-import { verifyInitData } from "../_lib/telegram.js";
-import { judgeRun } from "./_lib/judge.js";
-import { addMaterials, DAILY_RUNE_CAP, materialsOf, RUNE_MATERIAL } from "./_lib/studio.js";
+import { sql } from "../../../_lib/db.js";
+import { HttpError, readBody, route } from "../../../_lib/http.js";
+import { verifyInitData } from "../../../_lib/telegram.js";
+import { judgeRun } from "../judge.js";
+import { addMaterials, DAILY_RUNE_CAP, materialsOf, RUNE_MATERIAL } from "../studio.js";
 
 export default route(["POST"], async (req) => {
   const body = readBody(req);

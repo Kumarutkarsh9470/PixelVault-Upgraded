@@ -1,6 +1,6 @@
 // Glyph Forge: the longest runs, with the frame each runner owns on-chain.
-import { sql } from "../_lib/db.js";
-import { route } from "../_lib/http.js";
+import { sql } from "../../../_lib/db.js";
+import { route } from "../../../_lib/http.js";
 
 export default route(["GET"], async () => {
   const rows = await sql()`

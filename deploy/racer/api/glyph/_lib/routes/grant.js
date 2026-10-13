@@ -1,11 +1,11 @@
 // Glyph Forge: signs a grant for one craft of a Glyph Forge item, after
 // reserving its runes. Runes are spent once the craft lands on-chain, or
 // refunded if the grant expires unused (see reconcileGrants).
-import { GRANT_TTL_SECONDS } from "../_lib/sdk/index.js";
-import { sql } from "../_lib/db.js";
-import { HttpError, readBody, route } from "../_lib/http.js";
-import { verifyInitData } from "../_lib/telegram.js";
-import { findItem, GAME_ID, issueGrant, nextGrantSeq, reconcileGrants, upsertRunner } from "./_lib/studio.js";
+import { GRANT_TTL_SECONDS } from "../../../_lib/sdk/index.js";
+import { sql } from "../../../_lib/db.js";
+import { HttpError, readBody, route } from "../../../_lib/http.js";
+import { verifyInitData } from "../../../_lib/telegram.js";
+import { findItem, GAME_ID, issueGrant, nextGrantSeq, reconcileGrants, upsertRunner } from "../studio.js";
 
 export default route(["POST"], async (req) => {
   const body = readBody(req);

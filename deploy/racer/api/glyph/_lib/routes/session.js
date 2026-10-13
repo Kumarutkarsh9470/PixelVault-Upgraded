@@ -1,8 +1,8 @@
 // Glyph Forge: identifies the player from Telegram launch data, links their wallet, returns their state.
-import { sql } from "../_lib/db.js";
-import { readBody, route } from "../_lib/http.js";
-import { verifyInitData } from "../_lib/telegram.js";
-import { materialsOf, reconcileGrants, upsertRunner, verifiedFrame } from "./_lib/studio.js";
+import { sql } from "../../../_lib/db.js";
+import { readBody, route } from "../../../_lib/http.js";
+import { verifyInitData } from "../../../_lib/telegram.js";
+import { materialsOf, reconcileGrants, upsertRunner, verifiedFrame } from "../studio.js";
 
 export default route(["POST"], async (req) => {
   const body = readBody(req);

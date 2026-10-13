@@ -2,10 +2,10 @@
 // run, so a player has one live run at a time and cannot shop for good seeds.
 import { randomInt } from "node:crypto";
 
-import { sql } from "../_lib/db.js";
-import { HttpError, readBody, route } from "../_lib/http.js";
-import { verifyInitData } from "../_lib/telegram.js";
-import { upsertRunner } from "./_lib/studio.js";
+import { sql } from "../../../_lib/db.js";
+import { HttpError, readBody, route } from "../../../_lib/http.js";
+import { verifyInitData } from "../../../_lib/telegram.js";
+import { upsertRunner } from "../studio.js";
 
 const MAX_STARTS_PER_HOUR = 120;
 

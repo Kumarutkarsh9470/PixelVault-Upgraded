@@ -48,10 +48,17 @@ const types = {
 };
 
 async function runFunction(name, req, res) {
-  const file = path.join(root, "api", `${name}.js`);
+  let file = path.join(root, "api", `${name}.js`);
   if (!fs.existsSync(file)) {
-    res.writeHead(404).end("no such function");
-    return;
+    // A folder's [op].js catches every path under it, as on Vercel, with the last segment as req.query.op.
+    const parts = name.split("/");
+    const catchAll = path.join(root, "api", ...parts.slice(0, -1), "[op].js");
+    if (parts.length < 2 || !fs.existsSync(catchAll)) {
+      res.writeHead(404).end("no such function");
+      return;
+    }
+    file = catchAll;
+    req.query = { op: parts[parts.length - 1] };
   }
 
   let raw = "";
@@ -110,7 +117,7 @@ http
   .createServer((req, res) => {
     const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
     console.log(`${req.method} ${urlPath}`);
-    // Nested functions (api/glyph/start.js) route too; folders starting with _ are private, as on Vercel.
+    // Nested functions (api/glyph/[op].js) route too; folders starting with _ are private, as on Vercel.
     const fn = urlPath.match(/^\/api\/((?:[A-Za-z0-9-][\w-]*\/)*[A-Za-z0-9-][\w-]*)\/?$/);
     if (fn) {
       runFunction(fn[1], req, res).catch((e) => {
