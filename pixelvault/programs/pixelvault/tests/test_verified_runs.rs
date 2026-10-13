@@ -143,8 +143,8 @@ fn setup() -> World {
         BoostPad { lateral: to_fx(-2.8), sample: (count * 4 / 5) as u16, _padding: [0; 2] },
     ];
 
-    let track = pda(&[b"track", &TRACK_ID.to_le_bytes()]);
-    let leaderboard = pda(&[b"board", &TRACK_ID.to_le_bytes()]);
+    let track = pda(&[b"track", payer.pubkey().as_ref(), &TRACK_ID.to_le_bytes()]);
+    let leaderboard = pda(&[b"board", payer.pubkey().as_ref(), &TRACK_ID.to_le_bytes()]);
 
     let init = Instruction {
         program_id: pixelvault::id(),

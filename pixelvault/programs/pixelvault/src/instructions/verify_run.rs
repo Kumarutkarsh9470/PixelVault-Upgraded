@@ -26,7 +26,7 @@ pub struct OpenRun<'info> {
     pub payer: Signer<'info>,
     pub player: Signer<'info>,
     #[account(
-        seeds = [TRACK_SEED, &track_id.to_le_bytes()],
+        seeds = [TRACK_SEED, track.load()?.authority.as_ref(), &track_id.to_le_bytes()],
         bump = track.load()?.bump,
     )]
     pub track: AccountLoader<'info, TrackConfig>,
@@ -100,7 +100,7 @@ pub fn handle_write_run(ctx: Context<WriteRun>, offset: u16, data: Vec<u8>) -> R
 pub struct VerifyRun<'info> {
     pub player: Signer<'info>,
     #[account(
-        seeds = [TRACK_SEED, &track.load()?.track_id.to_le_bytes()],
+        seeds = [TRACK_SEED, track.load()?.authority.as_ref(), &track.load()?.track_id.to_le_bytes()],
         bump = track.load()?.bump,
     )]
     pub track: AccountLoader<'info, TrackConfig>,
@@ -114,7 +114,7 @@ pub struct VerifyRun<'info> {
     pub run: AccountLoader<'info, RunBuffer>,
     #[account(
         mut,
-        seeds = [LEADERBOARD_SEED, &leaderboard.load()?.track_id.to_le_bytes()],
+        seeds = [LEADERBOARD_SEED, track.load()?.authority.as_ref(), &leaderboard.load()?.track_id.to_le_bytes()],
         bump = leaderboard.load()?.bump,
         constraint = leaderboard.load()?.track_id == track.load()?.track_id @ PixelVaultError::InvalidTrack,
     )]

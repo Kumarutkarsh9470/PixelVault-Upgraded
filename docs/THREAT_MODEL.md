@@ -86,6 +86,23 @@ Glyph Forge replays every run instead of judging it. The rules are `deploy/racer
 | Malformed or oversized input logs | Strictly increasing ticks within the run, known actions only, at most one input per three ticks on average | `malformed input logs are refused before replay` |
 | Client and server rules drift apart | CI compiles the C# simulation with Mono and checks it against vectors generated from the server's rules | `tools/glyph-verify.sh` |
 
+### On verified runs
+
+| Attack | Defence | Evidence |
+|---|---|---|
+| Claim a time you did not drive | The client sends only the inputs it pressed; the program re-drives them step by step and derives the time itself, in resumable sponsored transactions | `the_chain_replays_a_run_and_ranks_the_time_it_derives` |
+| Pad the trace after the finish, or stop before it | Rejected during replay | `padding_after_the_finish_line_is_rejected`, `inputs_that_never_reach_the_line_are_rejected` |
+| Verify a trace that was never fully uploaded | Rejected | `a_trace_that_was_not_fully_uploaded_cannot_be_verified` |
+| Make the sponsor pay for a priority fee or for anything but the replay | The relayer allows only a compute-unit limit under the ceiling, and only open, write, verify and close, on their own, with the sponsor key only as payer or refund target | `sponsors run verification`, `compute budget: only a unit limit`, `run verification is sent on its own` |
+| Keep a run buffer's rent | `close_run` returns rent only to the account that paid it | `a_run_buffer_can_only_be_closed_to_the_account_that_paid_for_it` |
+| Squat a track id or pass off a different circuit under it | Track and leaderboard addresses are derived from the registering key as well as the id, so each author has their own namespace; the geometry is frozen before any run can be verified | `track.rs` seeds; `Track must be frozen before runs can be verified` |
+
+### On the admin role
+
+| Attack | Defence | Evidence |
+|---|---|---|
+| A single admin key is lost or stolen | The role is held in the Protocol account and moves with `transfer_admin`, so it lives on a multisig in production; the admin can never move backing in any case | `admin_role_transfers_and_the_old_key_loses_it` |
+
 ### Between studios
 
 | Attack | Defence | Evidence |

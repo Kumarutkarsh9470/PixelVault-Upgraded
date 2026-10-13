@@ -87,8 +87,9 @@ async function send(instructions, description) {
 }
 
 async function register(id, circuit, trackId) {
-  const track = pda([Buffer.from("track"), u64(trackId)]);
-  const leaderboard = pda([Buffer.from("board"), u64(trackId)]);
+  // Tracks are scoped to the key that registers them, so no one can squat an id.
+  const track = pda([Buffer.from("track"), admin.publicKey.toBuffer(), u64(trackId)]);
+  const leaderboard = pda([Buffer.from("board"), admin.publicKey.toBuffer(), u64(trackId)]);
 
   const existing = await connection.getAccountInfo(track);
   // Byte 95 of the account body is `frozen`; see sim::account::TrackConfig.

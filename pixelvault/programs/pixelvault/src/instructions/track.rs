@@ -29,6 +29,10 @@ pub struct TrackArgs {
     pub pads: Vec<PadArg>,
 }
 
+/// Tracks are scoped to the key that registers them: the PDA seeds include the
+/// authority, so nobody can squat another studio's track id or pass off a
+/// different circuit under it. Clients find a track by the address its author
+/// publishes, not by id alone.
 #[derive(Accounts)]
 #[instruction(track_id: u64)]
 pub struct InitTrack<'info> {
@@ -38,7 +42,7 @@ pub struct InitTrack<'info> {
         init,
         payer = authority,
         space = 8 + std::mem::size_of::<TrackConfig>(),
-        seeds = [TRACK_SEED, &track_id.to_le_bytes()],
+        seeds = [TRACK_SEED, authority.key().as_ref(), &track_id.to_le_bytes()],
         bump,
     )]
     pub track: AccountLoader<'info, TrackConfig>,
@@ -46,7 +50,7 @@ pub struct InitTrack<'info> {
         init,
         payer = authority,
         space = 8 + std::mem::size_of::<Leaderboard>(),
-        seeds = [LEADERBOARD_SEED, &track_id.to_le_bytes()],
+        seeds = [LEADERBOARD_SEED, authority.key().as_ref(), &track_id.to_le_bytes()],
         bump,
     )]
     pub leaderboard: AccountLoader<'info, Leaderboard>,
@@ -113,7 +117,7 @@ pub struct EditTrack<'info> {
     pub authority: Signer<'info>,
     #[account(
         mut,
-        seeds = [TRACK_SEED, &track.load()?.track_id.to_le_bytes()],
+        seeds = [TRACK_SEED, track.load()?.authority.as_ref(), &track.load()?.track_id.to_le_bytes()],
         bump = track.load()?.bump,
         has_one = authority @ PixelVaultError::Unauthorized,
     )]

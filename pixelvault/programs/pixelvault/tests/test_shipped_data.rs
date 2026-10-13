@@ -96,8 +96,8 @@ fn compute_budget(units: u32) -> Instruction {
 /// Registers a circuit exactly as the deployment tool will: create, write the
 /// centreline in chunks, freeze.
 fn register(svm: &mut LiteSVM, payer: &Keypair, track_id: u64, id: &str, circuit: &Value) -> (Pubkey, Pubkey) {
-    let track = pda(&[b"track", &track_id.to_le_bytes()]);
-    let leaderboard = pda(&[b"board", &track_id.to_le_bytes()]);
+    let track = pda(&[b"track", payer.pubkey().as_ref(), &track_id.to_le_bytes()]);
+    let leaderboard = pda(&[b"board", payer.pubkey().as_ref(), &track_id.to_le_bytes()]);
     let samples = ints(circuit, "samples");
     let count = circuit["sampleCount"].as_u64().unwrap() as u16;
     let pad_samples = ints(circuit, "padSamples");
