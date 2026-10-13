@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 
+import { Aurora, NavIcon, Particles, useTilt } from "../components/Fx";
 import { UnityStage } from "../components/UnityStage";
+import { demoMode } from "../lib/demo";
 import { sfx, startMusic, unlockAudio } from "../lib/audio";
 import { haptic, prepareTelegram } from "../lib/telegram";
 import { Vault } from "../screens/Vault";
@@ -32,6 +34,7 @@ export default function GlyphApp() {
   const runId = useRef<string | null>(null);
 
   useEffect(prepareTelegram, []);
+  useTilt();
 
   useEffect(() => {
     const start = () => {
@@ -49,11 +52,13 @@ export default function GlyphApp() {
   }, [unityReady, screen, glyph.cosmetics]);
 
   const startRun = useCallback(async () => {
-    if (!wallet) return;
+    if (!wallet && !demoMode) return;
     setOutcome(null);
     setRunError(null);
     try {
-      const { runId: id, seed } = await glyphApi.start(wallet);
+      const { runId: id, seed } = demoMode
+        ? { runId: "demo", seed: Math.floor(Math.random() * 2 ** 32) }
+        : await glyphApi.start(wallet!);
       runId.current = id;
       runner.send("StartRun", { seed: String(seed), cosmetics: glyph.cosmetics });
       setScreen("run");
@@ -105,10 +110,24 @@ export default function GlyphApp() {
   const goMenu = useCallback(() => setScreen("menu"), []);
 
   return (
-    <div className="app glyph">
+    <div className={`app glyph ${demoMode ? "demo" : ""} screen-${screen === "run" ? "race" : screen}`}>
       <UnityStage onReady={onUnityReady} load={runner.load} />
+      <Aurora />
+      {screen !== "run" && <Particles />}
 
-      {privyReady && !authenticated && (
+      {demoMode && unityReady && (
+        <div className="demo-banner">
+          <span className="demo-dot" />
+          <span>
+            <b>Showcase mode.</b> <span className="demo-long">Runs and forging use a demo wallet. Open it in Telegram to play for real USDC.</span><span className="demo-short">Demo wallet.</span>
+          </span>
+          <a href="https://t.me/pixelvault_racer_bot/race" target="_blank" rel="noreferrer">
+            Open in Telegram
+          </a>
+        </div>
+      )}
+
+      {!demoMode && privyReady && !authenticated && (
         <div className="gate">
           <div className="gate-card">
             <div className="logo big">
@@ -122,7 +141,7 @@ export default function GlyphApp() {
         </div>
       )}
 
-      {authenticated && !glyph.ready && unityReady && (
+      {!demoMode && authenticated && !glyph.ready && unityReady && (
         <div className="gate">
           <p className="muted">{glyph.error ?? "Lighting the forge…"}</p>
         </div>
@@ -141,10 +160,22 @@ export default function GlyphApp() {
 
           {screen === "menu" && (
             <nav className="bottom-nav">
-              <button className="active">Run</button>
-              <button onClick={() => setScreen("forge")}>Forge</button>
-              <button onClick={() => setScreen("vault")}>Vault</button>
-              <button onClick={() => setScreen("ranks")}>Ranks</button>
+              <button className="active">
+                <NavIcon kind="run" />
+                Run
+              </button>
+              <button onClick={() => setScreen("forge")}>
+                <NavIcon kind="forge" />
+                Forge
+              </button>
+              <button onClick={() => setScreen("vault")}>
+                <NavIcon kind="vault" />
+                Vault
+              </button>
+              <button onClick={() => setScreen("ranks")}>
+                <NavIcon kind="ranks" />
+                Ranks
+              </button>
             </nav>
           )}
         </>

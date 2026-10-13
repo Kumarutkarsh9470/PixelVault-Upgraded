@@ -2,6 +2,7 @@ import type { RunResult } from "../lib/api";
 import { formatTime } from "../lib/api";
 import type { Opponent } from "../lib/opponents";
 import type { RaceFinished } from "../lib/unity";
+import { AnimatedNumber, Confetti } from "../components/Fx";
 import { MaterialChip, MedalBadge, Sheet, Stat } from "../components/ui";
 import { tracks } from "./Home";
 import { formatDelta } from "./Race";
@@ -30,7 +31,9 @@ export function Results({
     <div className="screen results">
       <Sheet>
         <p className="eyebrow">{track?.name}</p>
-        <div className="result-time">{formatTime(finished.totalMs)}</div>
+        <div className="result-time">
+          <AnimatedNumber value={finished.totalMs} format={formatTime} duration={900} />
+        </div>
         <div className="result-deltas">
           {opponent && (
             <span className={finished.totalMs < opponent.totalMs ? "ahead" : "behind"}>
@@ -49,14 +52,15 @@ export function Results({
 
         {result && (
           <>
-            <div className="result-medal">
+            {(result.medal === "gold" || result.personalBest) && <Confetti />}
+            <div className="result-medal reveal">
               <MedalBadge medal={result.medal} size="lg" />
               {result.personalBest && <span className="pb">New personal best</span>}
             </div>
             {!result.valid && <p className="error">Run rejected: {result.reason}</p>}
             {result.valid && track && result.medal !== "gold" && <NextMedal totalMs={finished.totalMs} medals={track.medals} />}
 
-            <div className="stats">
+            <div className="stats stagger">
               <Stat label="Best" value={formatTime(result.best)} />
               <Stat label="Rank" value={result.rank ? `#${result.rank}` : "—"} />
               <Stat label="Respawns" value={finished.respawns} />

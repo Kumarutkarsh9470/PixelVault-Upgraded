@@ -18,7 +18,8 @@ import { SOLANA_CHAIN, SPONSOR_API } from "../config";
 import { api, formatUsdc } from "../lib/api";
 import { balancesOf, chain, classConfig, rpc } from "../lib/program";
 import { initData } from "../lib/telegram";
-import type { Item } from "./catalog";
+import { demo, settle, useDemo } from "../lib/demo";
+import { refundOf, type Item } from "./catalog";
 
 type Balances = { usdc: number; items: Record<string, number> };
 
@@ -40,7 +41,7 @@ type WalletState = {
   clearError: () => void;
 };
 
-const WalletContext = createContext<WalletState | null>(null);
+export const WalletContext = createContext<WalletState | null>(null);
 
 export function useWallet(): WalletState {
   const state = useContext(WalletContext);
@@ -176,6 +177,106 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     connected: ready && authenticated && !!wallet,
     wallet: wallet?.address ?? null,
     balances,
+    busy,
+    error,
+    owned,
+    refreshBalances,
+    craft,
+    redeem,
+    route,
+    withdraw,
+    onChange,
+    clearError,
+  };
+  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+}
+
+const itemKey = (item: Item) => `${item.gameId}-${item.classId}`;
+
+/** The showcase wallet: same interface, pretend USDC, nothing leaves the browser. */
+export function DemoWalletProvider({ children }: { children: ReactNode }) {
+  const state = useDemo();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const listener = useRef<(() => Promise<unknown>) | null>(null);
+
+  const owned = useCallback((item: Item) => state.items[itemKey(item)] ?? 0, [state.items]);
+
+  const run = useCallback(async (label: string, task: () => void): Promise<string> => {
+    setBusy(label);
+    setError(null);
+    try {
+      await settle();
+      task();
+      await listener.current?.();
+      return "demo";
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  const craft = useCallback(
+    (item: Item) =>
+      run(`Crafting ${item.name}`, () => {
+        const s = demo.get();
+        const recipe = Object.entries((item.recipe ?? {}) as Record<string, number>);
+        if (recipe.some(([m, n]) => (s.materials[m] ?? 0) < n)) throw new Error("not enough materials for this recipe");
+        if (s.usdc < item.price) throw new Error("not enough USDC");
+        const materials = { ...s.materials };
+        for (const [m, n] of recipe) materials[m] = (materials[m] ?? 0) - n;
+        demo.set({ usdc: s.usdc - item.price, materials, items: { ...s.items, [itemKey(item)]: (s.items[itemKey(item)] ?? 0) + 1 } });
+      }),
+    [run],
+  );
+
+  const redeem = useCallback(
+    (item: Item) =>
+      run(`Redeeming ${item.name}`, () => {
+        const s = demo.get();
+        const have = s.items[itemKey(item)] ?? 0;
+        if (have <= 0) throw new Error("nothing to redeem");
+        demo.set({ usdc: s.usdc + refundOf(item), items: { ...s.items, [itemKey(item)]: have - 1 } });
+      }),
+    [run],
+  );
+
+  const route = useCallback(
+    (from: Item, to: Item) =>
+      run(`Moving ${from.name} to ${to.name}`, () => {
+        const s = demo.get();
+        const have = s.items[itemKey(from)] ?? 0;
+        if (have <= 0) throw new Error("nothing to move");
+        const topUp = Math.max(0, to.price - refundOf(from));
+        if (s.usdc < topUp) throw new Error("not enough USDC for the top-up");
+        demo.set({
+          usdc: s.usdc - topUp,
+          items: { ...s.items, [itemKey(from)]: have - 1, [itemKey(to)]: (s.items[itemKey(to)] ?? 0) + 1 },
+        });
+      }),
+    [run],
+  );
+
+  const withdraw = useCallback(
+    () =>
+      run("Withdrawing", () => {
+        throw new Error("Withdrawals use the real wallet: open PixelVault inside Telegram.");
+      }),
+    [run],
+  );
+
+  const onChange = useCallback((next: (() => Promise<unknown>) | null) => {
+    listener.current = next;
+  }, []);
+  const clearError = useCallback(() => setError(null), []);
+  const refreshBalances = useCallback(async () => undefined, []);
+
+  const value: WalletState = {
+    connected: true,
+    wallet: null,
+    balances: { usdc: state.usdc, items: {} },
     busy,
     error,
     owned,

@@ -5,6 +5,7 @@ import { haptic } from "../lib/telegram";
 import { allItems, gameName, refundOf, type Item } from "../state/catalog";
 import { useWallet } from "../state/wallet";
 import { isDeployed } from "../lib/program";
+import { AnimatedNumber } from "../components/Fx";
 import { Sheet, Stat } from "../components/ui";
 import { WalletPanel } from "../components/WalletPanel";
 
@@ -51,8 +52,8 @@ export function Vault({ onBack }: { onBack: () => void }) {
 
       <Sheet>
         <div className="stats">
-          <Stat label="Refundable value" value={formatUsdc(refundable)} accent />
-          <Stat label="USDC" value={formatUsdc(balances.usdc)} />
+          <Stat label="Refundable value" value={<AnimatedNumber value={refundable} format={formatUsdc} />} accent />
+          <Stat label="USDC" value={<AnimatedNumber value={balances.usdc} format={formatUsdc} />} />
         </div>
         <p className="muted small">
           Every item holds USDC in a program-owned vault. Redeem any time — even if the game shuts down.
@@ -62,7 +63,7 @@ export function Vault({ onBack }: { onBack: () => void }) {
 
         <div className="item-list">
           {holdings.map((item) => (
-            <div key={`${item.gameId}-${item.key}`} className="item-card">
+            <div key={`${item.gameId}-${item.key}`} className="item-card" data-tilt>
               <div className="item-head">
                 <span
                   className={`swatch ${item.type === "chassis" ? "swatch-model" : ""}`}
@@ -123,11 +124,20 @@ export function Vault({ onBack }: { onBack: () => void }) {
               <Stat label="Vaults solvent" value={stats.solvent ? "Yes ✓" : "Check"} />
             </div>
             {stats.games.map((g) => (
-              <div key={g.gameId} className="stat-line">
-                <span>{g.name}</span>
-                <span className="muted">
-                  {g.crafted} crafted · {g.redeemed} redeemed · vault {formatUsdc(g.vaultBalance)}
-                </span>
+              <div key={g.gameId} className="solvency">
+                <div className="stat-line">
+                  <span>{g.name}</span>
+                  <span className="muted">
+                    {g.crafted} crafted · {g.redeemed} redeemed · vault {formatUsdc(g.vaultBalance)}
+                  </span>
+                </div>
+                <div className="solvency-bar" title="vault balance against what it owes">
+                  <i style={{ width: `${Math.min(100, g.totalBacked > 0 ? (g.vaultBalance / g.totalBacked) * 100 : 100)}%` }} />
+                  <b style={{ left: "100%" }} />
+                </div>
+                <small className="muted">
+                  owes {formatUsdc(g.totalBacked)} · {g.vaultBalance >= g.totalBacked ? "fully covered" : "short"}
+                </small>
               </div>
             ))}
           </div>

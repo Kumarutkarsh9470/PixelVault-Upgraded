@@ -1,4 +1,5 @@
 import { formatUsdc } from "../../lib/api";
+import { AnimatedNumber } from "../../components/Fx";
 import { MaterialChip } from "../../components/ui";
 import { catalog } from "../../state/catalog";
 import { useWallet } from "../../state/wallet";
@@ -20,7 +21,9 @@ export function Menu({ onRun }: { onRun: () => void }) {
         <div className="logo">
           GLYPH<span>FORGE</span>
         </div>
-        <div className="wallet-pill">{formatUsdc(balances.usdc)}</div>
+        <div className="wallet-pill">
+          <AnimatedNumber value={balances.usdc} format={formatUsdc} />
+        </div>
       </header>
 
       <div className="materials-row">

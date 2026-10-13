@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 
+import { Aurora, NavIcon, Particles, useTilt } from "./components/Fx";
 import { UnityStage } from "./components/UnityStage";
+import { demoMode } from "./lib/demo";
 import type { RunResult } from "./lib/api";
 import { applySettings, sfx, startMusic, unlockAudio } from "./lib/audio";
 import { leader, nova, personalBest, savePersonalBest, type Opponent, type OpponentKind } from "./lib/opponents";
@@ -62,6 +64,7 @@ export default function App() {
   const track = tracks.find((t) => t.id === trackId) ?? tracks[0];
 
   useEffect(prepareTelegram, []);
+  useTilt();
 
   // Audio can only start from a gesture: the first tap anywhere starts the soundtrack.
   useEffect(() => {
@@ -168,10 +171,24 @@ export default function App() {
   const goHome = useCallback(() => setScreen("home"), []);
 
   return (
-    <div className="app">
+    <div className={`app ${demoMode ? "demo" : ""} screen-${screen}`}>
       <UnityStage onReady={onUnityReady} />
+      <Aurora />
+      {screen !== "race" && <Particles />}
 
-      {privyReady && !authenticated && (
+      {demoMode && unityReady && (
+        <div className="demo-banner">
+          <span className="demo-dot" />
+          <span>
+            <b>Showcase mode.</b> <span className="demo-long">You are playing on a demo wallet. Open it in Telegram to race for real USDC.</span><span className="demo-short">Demo wallet.</span>
+          </span>
+          <a href="https://t.me/pixelvault_racer_bot/race" target="_blank" rel="noreferrer">
+            Open in Telegram
+          </a>
+        </div>
+      )}
+
+      {!demoMode && privyReady && !authenticated && (
         <div className="gate">
           <div className="gate-card">
             <div className="logo big">
@@ -185,7 +202,7 @@ export default function App() {
         </div>
       )}
 
-      {authenticated && !game.ready && unityReady && (
+      {!demoMode && authenticated && !game.ready && unityReady && (
         <div className="gate">
           <p className="muted">{game.error ?? "Setting up your garage…"}</p>
         </div>
@@ -224,10 +241,22 @@ export default function App() {
 
           {screen === "home" && (
             <nav className="bottom-nav">
-              <button className="active">Race</button>
-              <button onClick={() => setScreen("garage")}>Garage</button>
-              <button onClick={() => setScreen("vault")}>Vault</button>
-              <button onClick={() => setScreen("ranks")}>Ranks</button>
+              <button className="active">
+                <NavIcon kind="race" />
+                Race
+              </button>
+              <button onClick={() => setScreen("garage")}>
+                <NavIcon kind="garage" />
+                Garage
+              </button>
+              <button onClick={() => setScreen("vault")}>
+                <NavIcon kind="vault" />
+                Vault
+              </button>
+              <button onClick={() => setScreen("ranks")}>
+                <NavIcon kind="ranks" />
+                Ranks
+              </button>
             </nav>
           )}
         </>
@@ -235,3 +264,4 @@ export default function App() {
     </div>
   );
 }
+

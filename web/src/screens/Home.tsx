@@ -4,6 +4,7 @@ import type { Opponent, OpponentKind } from "../lib/opponents";
 import { catalog } from "../state/catalog";
 import { useGame } from "../state/game";
 import { useWallet } from "../state/wallet";
+import { AnimatedNumber } from "../components/Fx";
 import { MaterialChip, MedalBadge } from "../components/ui";
 
 export const tracks = tracksData.tracks;
@@ -49,7 +50,9 @@ export function Home({
           PIXEL<span>VAULT</span>
         </div>
         <div className="topbar-right">
-          <div className="wallet-pill">{formatUsdc(balances.usdc)}</div>
+          <div className="wallet-pill">
+            <AnimatedNumber value={balances.usdc} format={formatUsdc} />
+          </div>
           <button className="icon-button" onClick={onSettings} aria-label="Settings">
             ⚙
           </button>
@@ -77,7 +80,7 @@ export function Home({
 
         <div className="targets">
           {(["gold", "silver", "bronze"] as const).map((m) => (
-            <div key={m} className={`target target-${m}`}>
+            <div key={m} className={`target target-${m}`} data-tilt>
               <MedalBadge medal={m} size="sm" />
               <span>{formatTime(track.medals[m])}</span>
               <small>+{catalog.medalRewards[m]}</small>
@@ -116,10 +119,11 @@ export function Home({
           Medals here earn <b style={{ color: material.color }}>{material.name}</b>, used to craft cosmetics.
         </p>
 
-        <button className="primary big" onClick={onRace}>
-          Race
+        <button className="primary big race-button" onClick={onRace}>
+          <span>Race</span>
+          <small>{track.laps} laps · {OPPONENT_LABELS[opponentKind as Exclude<OpponentKind, "none">] ?? "solo"}</small>
         </button>
-        <a className="game-switch" href="/glyph.html">
+        <a className="game-switch" href="/glyph.html" data-tilt>
           <span>
             <b>Glyph Forge</b>
             <small className="muted">Another studio's runner. Same wallet, same vault: move items between games.</small>

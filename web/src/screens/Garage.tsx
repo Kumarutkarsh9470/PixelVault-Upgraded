@@ -88,7 +88,7 @@ export function Garage({ onBack }: { onBack: () => void }) {
             const selected = preview?.key === item.key;
 
             return (
-              <div key={item.key} className={`item-card ${selected ? "selected" : ""}`} onClick={() => setPreview(item)}>
+              <div key={item.key} className={`item-card ${selected ? "selected" : ""}`} data-tilt onClick={() => setPreview(item)}>
                 <div className="item-head">
                   <span
                     className={`swatch ${item.type === "chassis" ? "swatch-model" : ""}`}
