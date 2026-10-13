@@ -1,4 +1,4 @@
-// On-chain reads and grant signing for the game server, on @pixelvault/sdk.
+// On-chain reads and grant signing for the game server, on pixelvault-sdk.
 import fs from "node:fs";
 import { Connection } from "@solana/web3.js";
 import { address, createSolanaRpc } from "@solana/kit";

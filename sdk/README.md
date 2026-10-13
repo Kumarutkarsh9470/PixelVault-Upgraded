@@ -1,11 +1,13 @@
-# @pixelvault/sdk
+# pixelvault-sdk
+
+[![npm](https://img.shields.io/npm/v/pixelvault-sdk)](https://www.npmjs.com/package/pixelvault-sdk)
 
 Add refundable, USDC-backed items to a game. Your server decides when a player has earned a craft and signs a grant; the player's client turns the grant into a transaction; the PixelVault program takes the USDC, locks the backing in your game's vault, and mints the item. Players can redeem any item for its backing at any time, without your server.
 
 One dependency: [`@solana/kit`](https://github.com/anza-xyz/kit) 8.x. Works in browsers and Node 20+.
 
 ```bash
-npm install @pixelvault/sdk @solana/kit
+npm install pixelvault-sdk @solana/kit
 ```
 
 ## Quickstart: a game with one item in ten minutes
@@ -40,7 +42,7 @@ npx pixelvault setup --catalog game.json --studio studio.json --grant-signer sig
 **4. Server: sign a grant when a player earns a craft.**
 
 ```ts
-import { createGrantSigner, fetchNextGrantSeq, signGrant, type Deployment } from "@pixelvault/sdk";
+import { createGrantSigner, fetchNextGrantSeq, signGrant, type Deployment } from "pixelvault-sdk";
 import { address, createSolanaRpc } from "@solana/kit";
 import deployment from "./chain.json" with { type: "json" };
 
@@ -59,7 +61,7 @@ A grant is bound to your program deployment, game, item class, player, sequence 
 **5. Client: craft, redeem, move.**
 
 ```ts
-import { compileSponsored, craftInstructions, redeemInstruction, routeInstructions } from "@pixelvault/sdk";
+import { compileSponsored, craftInstructions, redeemInstruction, routeInstructions } from "pixelvault-sdk";
 
 // Craft: the grant's signature check, then craft. rentPayer may be the player or a fee sponsor.
 const ixs = await craftInstructions(deployment, { player, rentPayer, grant });
@@ -74,7 +76,7 @@ const route = await routeInstructions(deployment, { player, rentPayer, from: { g
 **6. Players without SOL: run a sponsor.** `createSponsor` is the fee-payer relayer with the rules already written: it pays only for `craft`, `redeem`, a redeem-then-craft route, and USDC withdrawals by the caller's own wallet; it refuses priority fees, lookup tables, other programs, other signers, and any use of the sponsor key except as `craft`'s rent payer. You decide who the caller is and how often they may ask.
 
 ```ts
-import { createSponsor } from "@pixelvault/sdk";
+import { createSponsor } from "pixelvault-sdk";
 import { createSolanaRpc } from "@solana/kit";
 
 const sponsor = await createSponsor({

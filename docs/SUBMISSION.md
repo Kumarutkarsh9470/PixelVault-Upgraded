@@ -21,7 +21,7 @@ Studios earn the unbacked margin on every craft and can price items higher than 
 The submission is a working product, live on Solana devnet as a Telegram Mini App:
 
 - **Neon Racer**, a Unity racing game. Medals earn materials; materials plus USDC craft chassis, underglow and trails; every item shows its refund value before you pay; the Vault redeems it in one tap.
-- **Glyph Forge**, a second game built as an outside studio would build it, through `@pixelvault/sdk` only, with its own backend and its own on-chain grant key. Every run is replayed on the server from the player's inputs. Items move between the two games in a single transaction, at par.
+- **Glyph Forge**, a second game built as an outside studio would build it, through `pixelvault-sdk` only, with its own backend and its own on-chain grant key. Every run is replayed on the server from the player's inputs. Items move between the two games in a single transaction, at par.
 - **Embedded wallets with no SOL.** Telegram login creates a Privy wallet; a relayer sponsors every fee and only co-signs a strict allowlist of instructions.
 - **A studio integrates with one command.** `npx pixelvault setup` registers a game and its item classes from a catalog file and writes the addresses the SDK needs; `createSponsor` gives any studio the fee-payer relayer with its safety rules built in, behind their own login. A third game was registered on devnet this way with a throwaway key: https://explorer.solana.com/address/F8Wb3An2AjWC2xGMzaJHskSvpzxtFeqCzYvL4L3CduvN?cluster=devnet
 - **Twelve adversarial program tests**, SDK tests against the compiled program, sponsor-rule tests on real compiled transactions, relayer attack tests, and a threat model that maps each attack to the test that stops it, all in CI.
@@ -38,7 +38,7 @@ Solana (devnet), Anchor 1.2, Token-2022, Ed25519 precompile, @solana/kit, litesv
 - Live Mini App: https://t.me/pixelvault_racer_bot/race (or https://pixelvault-racer.vercel.app)
 - Program on devnet: https://explorer.solana.com/address/AANvcGamRqQccnrx3XHnynJAXh4KCdJAa2XYnazNsuoZ?cluster=devnet
 - Threat model: https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/blob/main/docs/THREAT_MODEL.md
-- Studio SDK guide: https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/blob/main/sdk/README.md
+- Studio SDK on npm: https://www.npmjs.com/package/pixelvault-sdk (guide: https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/blob/main/sdk/README.md)
 - Verified runs, in progress (the program re-drives each race from the player's inputs): https://github.com/Kumarutkarsh9470/PixelVault-Upgraded/tree/verified-runs
 
 ## Team
@@ -48,7 +48,7 @@ Solana (devnet), Anchor 1.2, Token-2022, Ed25519 precompile, @solana/kit, litesv
 
 ## Go-to-market
 
-**Wedge: Telegram mini-game studios.** They already have the players, the sign-in and the payments problem, and their players already distrust in-game purchases. PixelVault ships as a Telegram Mini App with embedded wallets, so a studio's players never see a seed phrase or hold SOL. The integration is a server that signs grants plus a client that builds two instructions, which is what `@pixelvault/sdk` packages.
+**Wedge: Telegram mini-game studios.** They already have the players, the sign-in and the payments problem, and their players already distrust in-game purchases. PixelVault ships as a Telegram Mini App with embedded wallets, so a studio's players never see a seed phrase or hold SOL. The integration is a server that signs grants plus a client that builds two instructions, which is what `pixelvault-sdk` packages.
 
 **Business model.** The protocol fee is 12.5% of the studio's margin on every craft, so the protocol earns only when studios sell. Redemption and moving items between games are free, which is what makes the guarantee credible.
 

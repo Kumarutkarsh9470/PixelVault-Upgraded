@@ -1,5 +1,5 @@
 // Glyph Forge's studio backend: its game id, catalogue, players, runes and
-// grant signing. Integrates PixelVault only through @pixelvault/sdk, with its
+// grant signing. Integrates PixelVault only through pixelvault-sdk, with its
 // own grant key (GLYPH_GRANT_SIGNER_SECRET), exactly as a third-party studio would.
 import fs from "node:fs";
 import { address, createSolanaRpc } from "@solana/kit";

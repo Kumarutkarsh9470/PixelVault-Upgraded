@@ -1,5 +1,5 @@
 {
-  "name": "@pixelvault/sdk",
+  "name": "pixelvault-sdk",
   "version": "0.2.0",
   "description": "Integrate USDC-backed, refundable items from the PixelVault Solana program into a game",
   "license": "Apache-2.0",

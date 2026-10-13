@@ -32,7 +32,7 @@ You can check the claim yourself in about ninety seconds:
 | **Threat model** | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md): every attack we considered, its defence, and the test that proves it |
 | **Run locally** | `node tools/serve-web.mjs deploy/racer 8091` → http://localhost:8091 |
 | **Second game** | [Glyph Forge](#4-glyph-forge-does-value-really-move-between-games): an endless runner from a separate studio, built only on the SDK, every run replayed on the server |
-| **Studio SDK** | [`sdk/`](sdk): `npx pixelvault setup` registers a game and its items from a catalog file; builders for grants, craft/redeem/route, studio operations and cash-out; `createSponsor` is the fee-payer relayer with its rules built in. [Quickstart](sdk/README.md) |
+| **Studio SDK** | [`pixelvault-sdk` on npm](https://www.npmjs.com/package/pixelvault-sdk), source in [`sdk/`](sdk): `npx pixelvault setup` registers a game and its items from a catalog file; builders for grants, craft/redeem/route, studio operations and cash-out; `createSponsor` is the fee-payer relayer with its rules built in. [Quickstart](sdk/README.md) |
 | **Tests** | 12 program tests, SDK tests against the compiled program, relayer and run-replay tests, the runner's C# checked against the server's rules: all in [CI](.github/workflows/ci.yml) on every push |
 
 Built for the **Colosseum Crypto World's Fair** hackathon, Solana track.
@@ -116,7 +116,7 @@ One Telegram Mini App with two Unity WebGL games from two studios, sharing one w
 <img src="docs/media/glyph-run.gif" alt="A Glyph Forge run" width="100%">
 -->
 
-**A second game, from a second studio.** Glyph Forge is an endless runner: three lanes, swipe to change lanes, jump and slide, gather three kinds of runes, and go as far as you can while it speeds up. It has its own Unity project, its own backend (`/api/glyph/*`) with its own tables, and its own grant-signing key registered on-chain. It talks to PixelVault only through [`@pixelvault/sdk`](sdk), exactly as an outside studio would.
+**A second game, from a second studio.** Glyph Forge is an endless runner: three lanes, swipe to change lanes, jump and slide, gather three kinds of runes, and go as far as you can while it speeds up. It has its own Unity project, its own backend (`/api/glyph/*`) with its own tables, and its own grant-signing key registered on-chain. It talks to PixelVault only through [`pixelvault-sdk`](sdk), exactly as an outside studio would.
 
 **Every run is replayed on the server.** When a run starts, the server issues a random seed. The level is generated from that seed, and the runner's movement is an integer-only, fixed-tick simulation written identically in C# (the game) and JavaScript (the server). When the run ends, the game sends only its inputs; the server replays them on the seed and pays out exactly the runes the replay collected. Generated test vectors keep the two implementations byte-for-byte identical in CI.
 
@@ -204,7 +204,7 @@ flowchart LR
     subgraph Telegram Mini App
         U[Neon Racer<br/>Unity WebGL] <-->|bridge| R[racer page]
         G[Glyph Forge<br/>Unity WebGL] <-->|bridge| GP[Glyph Forge page]
-        R --- W[shared wallet + vault<br/>Privy, @pixelvault/sdk]
+        R --- W[shared wallet + vault<br/>Privy, pixelvault-sdk]
         GP --- W
     end
     R -->|initData-signed calls| API
@@ -228,7 +228,7 @@ flowchart LR
 | [`pixelvault/`](pixelvault) | Anchor program: protocol, game vaults, Token-2022 item classes, craft, redeem, raise backing; litesvm tests |
 | [`game/`](game) | Neon Racer, Unity 6 for WebGL: car physics, procedural tracks and scenery, ghosts, bloom, and a quality governor that drops effects on slow phones |
 | [`glyph/`](glyph) | Glyph Forge: the Unity 6 runner (`glyph/game`), and the level and replay test vectors it shares with its server (`glyph/level`) |
-| [`sdk/`](sdk) | `@pixelvault/sdk`: what a studio integrates. Grant signing, craft/redeem/route and USDC transfer instructions, balances, the exact price split. The racer uses it on both client and server |
+| [`sdk/`](sdk) | `pixelvault-sdk`: what a studio integrates. Grant signing, craft/redeem/route and USDC transfer instructions, balances, the exact price split. The racer uses it on both client and server |
 | [`web/`](web) | React pages for both games (`index.html`, `glyph.html`) on a shared wallet layer: Telegram login, Privy wallet, vault with deposit and withdraw, garage and forge, ranks |
 | [`deploy/racer/`](deploy/racer) | Vercel deployment: both builds, both studios' API functions (`api/`, `api/glyph/`), the relayer and the database schema |
 | [`tools/`](tools) | Devnet bootstrap, deploy assembly, DB migration, local server, relayer attack tests, track calibration, Glyph Forge vectors and the Unity compile check |

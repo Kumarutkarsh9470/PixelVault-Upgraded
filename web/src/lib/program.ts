@@ -1,6 +1,6 @@
-// The racer's PixelVault deployment and chain access, built on @pixelvault/sdk.
+// The racer's PixelVault deployment and chain access, built on pixelvault-sdk.
 import { createSolanaRpc } from "@solana/kit";
-import { classDeployment, fetchBalances, type Deployment } from "@pixelvault/sdk";
+import { classDeployment, fetchBalances, type Deployment } from "pixelvault-sdk";
 
 import chainData from "../data/chain.json";
 

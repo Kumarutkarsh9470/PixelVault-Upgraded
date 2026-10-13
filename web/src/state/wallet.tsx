@@ -12,7 +12,7 @@ import {
   routeInstructions,
   usdcTransferInstruction,
   type SponsorQuote,
-} from "@pixelvault/sdk";
+} from "pixelvault-sdk";
 
 import { SOLANA_CHAIN, SPONSOR_API } from "../config";
 import { api, formatUsdc } from "../lib/api";
