@@ -340,14 +340,11 @@ test("a studio rotates its grant signer with update_game, and the old key's gran
   const world = await setup();
   const player = world.player.address;
   const studio = world.studios[2];
-  const game = address(world.deployment.games[2].game);
   const keys = await generateKeyPair();
   const fresh: GrantSigner = { address: await getAddressFromPublicKey(keys.publicKey), keys };
 
   // update_game(crafting_paused: None, grant_signer: Some(fresh), backed_cap: None), as tools/setup-devnet.mjs sends it.
-  await world.ok(world.studios[1], [
-    await updateGameInstruction(world.deployment, { authority: world.studios[1].address, gameId: 1, grantSigner: fresh.address }),
-  ]);
+  await world.ok(studio, [await updateGameInstruction(world.deployment, { authority: studio.address, gameId: 2, grantSigner: fresh.address })]);
 
   const stale = await craft(world, 2, 1);
   assert.ok(stale instanceof FailedTransactionMetadata, "a grant from the old signer should fail");
