@@ -13,5 +13,5 @@ cd "$WORK" || exit 1
 npm ci --no-audit --no-fund >/tmp/pixelvault-sdk-install.log 2>&1 || { tail -5 /tmp/pixelvault-sdk-install.log; exit 1; }
 # A lockfile written on Windows omits the Linux binding (npm/cli#4828); add it explicitly.
 npm install --no-save --no-audit --no-fund "litesvm-linux-x64-gnu@$(node -p "require('litesvm/package.json').version")" >>/tmp/pixelvault-sdk-install.log 2>&1 || true
-export PIXELVAULT_PROGRAM_SO="$SRC/../pixelvault/target/deploy/pixelvault.so"
+export PIXELVAULT_SO="$SRC/../pixelvault/target/deploy/pixelvault.so"
 node --import tsx --test test/${1:-*}.test.ts 2>&1 | grep -E "^# (tests|pass|fail|skipped)|^not ok|^ok|Error:|AssertionError" | head -60
