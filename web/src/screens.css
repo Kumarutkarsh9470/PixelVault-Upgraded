@@ -296,6 +296,15 @@
   margin: 6px 0 14px;
 }
 
+.podium:has(> :only-child) {
+  grid-template-columns: minmax(0, 220px);
+  justify-content: center;
+}
+
+.podium:has(> :nth-child(2):last-child) {
+  grid-template-columns: 1fr 1fr;
+}
+
 .podium-step {
   position: relative;
   display: flex;
