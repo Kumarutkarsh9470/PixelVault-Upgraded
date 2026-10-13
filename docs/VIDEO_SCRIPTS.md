@@ -2,36 +2,26 @@
 
 Colosseum asks for two videos: a presentation of two to three minutes, which judges watch first, and a product demo of at most three minutes. Record the demo on your phone inside Telegram with screen recording, then record the pitch over slides or over the demo footage. Speak slowly. Each block below is about fifteen seconds.
 
-## Pitch video (2:40, you on camera plus product footage)
+## Pitch video (2:50, the whole pitch told while navigating the Mini App, no slides)
 
-Judges watch this one first and judge it as a startup pitch: team, insight, product, market, viability. Record yourself with the phone camera for the open and close, and lay product footage from the demo recording under the middle. Six simple slides, text below, cover the numbers; everything else is the live product on screen. One row per block, with the seconds, what is on screen, and the words.
+Same recording method as the demo: the Mini App on your phone, screen by screen, in the order a player meets it. The difference is the narration. The demo says what each screen does; the pitch uses each screen to make one point of the startup case: problem, insight, the guarantee, the model, the product, the second studio, the SDK, the proof, what is next. Nothing on screen but the live product. One row per navigation, with the seconds and the words.
 
-| Time | On screen | Say |
-|---|---|---|
-| 0:00 | You, on camera. | "I'm [name], from [city]. I build games, and I've watched web3 games kill their own economies. PixelVault fixes the one thing players never forgave: losing their money." |
-| 0:12 | Slide 1: PROBLEM. | "Every web3 game economy has died the same way. Tokens to zero. NFTs with no buyers. A studio shuts down and every item it sold is worth nothing. Players learned: never put money into a web3 game." |
-| 0:27 | Footage: Garage, the backing meter on an item (price, locked share, refund). | "PixelVault makes a game item a claim on real money. When you craft an item, most of its price is locked as USDC in a vault owned by the program, not the studio. Burn the item any time and the USDC comes back. In-game purchases you can refund." |
-| 0:45 | Slide 2: THE GUARANTEE. | "The studio picks the backing inside a band of fifty to ninety-five percent, compiled into the program. It can raise backing, never lower it. It cannot withdraw from the vault and it cannot pause redemption. If the studio disappears, redemption still works, because it needs no server." |
-| 1:03 | Slide 3: THE MODEL. | "Studios keep the unbacked margin and can charge more, because the player's real cost is only that margin. A one-dollar item with ninety percent backing costs the player ten cents. The protocol takes twelve and a half percent of the margin, nothing on redemption. We earn only when studios sell." |
-| 1:20 | Footage: Telegram launch, a race lap, the finish, Results with the medal and the earned material. | "It's live on Solana devnet as a Telegram Mini App. Neon Racer is a real racing game: win medals, earn materials, craft cosmetics. You never hold SOL. Telegram login creates an embedded wallet and a relayer pays every fee." |
-| 1:38 | Footage: Vault, Redeem, then Move to another game into a Glyph Forge frame, then Glyph Forge running. | "Then we built a second game the way an outside studio would: only through the SDK, its own backend, its own on-chain key. Move an item from one game to the other in one transaction, at par. One wallet, two studios, one guarantee." |
-| 1:55 | Slide 4: FOR STUDIOS. | "A studio integrates with one command. The SDK is on npm; npx pixelvault setup registers a game and its items from a catalog file; the fee-payer relayer ships as a library with its safety rules tested. A third game went on devnet this way in two transactions." |
-| 2:10 | Slide 5: PROOF. | "Twelve adversarial program tests asserting exact error codes. SDK tests against the compiled program. Every relayer rule tested on real transactions. A threat model that maps each attack to the test that stops it. All in CI." |
-| 2:22 | Slide 6: NEXT. | "Next: mainnet with real USDC and launch caps, the first outside studios on the SDK, a public solvency dashboard, and races the chain verifies itself, which already has thirty-seven passing tests on a branch." |
-| 2:34 | You, on camera. | "Players get their money back. Studios get paid more. PixelVault. [name], building from India." |
+| Time | Navigate to | Show | Say |
+|---|---|---|---|
+| 0:00 | Telegram chat with the bot, tap **Race** | Boot screen, then the sign-in card. Tap Sign in. | "I'm [name], from [city]. Web3 game economies have died the same way every time: tokens to zero, items nobody will buy, a studio that shuts down and takes the money with it. Players learned never to spend. This is PixelVault, and it starts where they are: Telegram. Login creates a wallet. No seed phrase, no SOL." |
+| 0:22 | **Home** | The 3D track behind the panel, the USDC pill at $2.00, the medal targets. | "The idea is one sentence: an in-game item is a claim on real money. Everything here is priced in dollars, and every dollar a player spends is mostly theirs to take back." |
+| 0:34 | Tap **RACE**, drive one lap | Lights, GO, a drift and a boost, the HUD. Cut the lap to about twelve seconds. | "A real game comes first, because nobody keeps an economy for a game they don't want to play. Medals pay materials. Materials unlock crafting. They are never money on their own." |
+| 0:50 | **Results** | Medal reveal, the ladder, the earned material. | "Here is the material I earned. Now watch what it unlocks." |
+| 0:56 | **Garage**, tap Underglow, tap Cyan Pulse | The car lights up. Point at price, locked share and refund on the backing meter. | "Every item shows two numbers before you pay: the price, and the refund. Seventy percent of this one is locked as USDC in a vault owned by the program, not the studio. The studio picks the backing inside a band of fifty to ninety-five percent compiled into the program. It can raise it, never lower it. It cannot withdraw and it cannot pause redemption." |
+| 1:18 | Tap **Craft** | No popup. Balance drops, ×1 appears. | "One tap. The wallet signs silently, a relayer pays the fee. Thirty cents left my wallet: twenty-one went into the vault, the rest is the studio's margin, and the protocol takes twelve and a half percent of that margin. That is the business: we earn only when studios sell, and redemption is free." |
+| 1:35 | **Vault** | Refundable value counts up, the holding with its backing meter. | "Why would a studio want this? Because they can charge more. The player's real cost is only the margin, so a one-dollar item with ninety percent backing costs the player ten cents." |
+| 1:47 | Tap **Redeem** | Item gone, USDC up. | "And the player's side of the deal: redeem, any time, no buyer, no approval. This works even if the studio is gone, because it needs no server." |
+| 1:58 | Craft one more, back to **Vault**, tap **Move to another game**, pick a Glyph Forge frame, confirm | The route options with the top-up. | "Value moves between games at par, in one transaction. That is the second product: a protocol, not one game." |
+| 2:10 | Home → **Glyph Forge**, tap Run, play ten seconds, then **Forge** | The runner, then the frames with backing meters. | "So we built a second game the way an outside studio would: only through our SDK, its own backend, its own on-chain key. Same wallet, same guarantee. A studio integrates with one command: the SDK is on npm, npx pixelvault setup registers a game and its items from a file, and the fee-payer relayer ships as a library with its rules tested. A third game went on devnet this way in two transactions." |
+| 2:32 | Back to **Vault**, scroll to **Protocol, live from the chain** | The solvency bars for both games. | "Proof you can check: every vault and what it owes, read straight from Solana. Behind it, twelve adversarial program tests, SDK tests against the compiled program, every relayer rule tested, and a threat model that maps each attack to the test that stops it, all in CI." |
+| 2:44 | Stay on the solvency panel | | "Next is mainnet with real USDC and launch caps, the first outside studios, and races the chain verifies itself. Players get their money back. Studios get paid more. PixelVault. [name], building from India." |
 
-### The six slides
-
-Plain dark background, one headline, three to four short lines, no logos. Ten minutes in any slide tool.
-
-1. **PROBLEM**: Tokens to zero · NFTs with no buyers · Studio gone, items worth nothing · Players stopped trusting
-2. **THE GUARANTEE**: Backing 50–95%, compiled into the program · Can rise, never fall · No withdrawal, no pause · Redemption needs no server
-3. **THE MODEL**: $1.00 item, 90% backing → player's real cost $0.10 · Studio keeps the margin · Protocol: 12.5% of margin · Redemption free
-4. **FOR STUDIOS**: npm install pixelvault-sdk · npx pixelvault setup · createSponsor: relayer with rules · Third game registered in two transactions
-5. **PROOF**: 12 adversarial program tests · SDK tests vs the compiled program · Relayer rules tested on real transactions · Threat model → test, all in CI
-6. **NEXT**: Mainnet, real USDC, launch caps · First outside studios · Public solvency dashboard · Chain-verified races (37 tests, in progress)
-
-Record the on-camera open and close in one take each, in good light, phone at eye level. Export at 1080p, upload unlisted to YouTube, and paste the link into the presentation-video field. If you run long, shorten slide 5 to one sentence; never cut the footage rows.
+Two fill-ins: your name and city. If you run long, trim the Glyph Forge row to the first two sentences; keep the Garage, Craft, Vault and Redeem rows whole, they carry the pitch. Record the pitch after the demo: it is the same navigation, so the second pass will be smoother.
 
 ## Demo video (2:50, live product only, every screen)
 
