@@ -39,6 +39,12 @@ solana airdrop 1 $(solana-keygen pubkey studio.json) --url devnet
 npx pixelvault setup --catalog game.json --studio studio.json --grant-signer signer.json --out chain.json
 ```
 
+**Test USDC for your players.** The protocol's devnet USDC is a mock mint, so there is a public faucet: once per wallet, two test dollars.
+
+```bash
+curl -X POST https://pixelvault-racer.vercel.app/api/faucet -H "content-type: application/json" -d '{"wallet":"<player wallet>"}'
+```
+
 **4. Server: sign a grant when a player earns a craft.**
 
 ```ts

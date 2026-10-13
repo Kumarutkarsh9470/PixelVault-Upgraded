@@ -126,3 +126,10 @@ create index if not exists glyph_grants_open on glyph_grants (telegram_id) where
 -- checks ownership on-chain itself before storing it.
 alter table glyph_players add column if not exists frame text;
 alter table players add column if not exists frame text;
+
+-- Public devnet faucet: one grant of test USDC per wallet.
+create table if not exists faucet_grants (
+  wallet     text primary key,
+  created_at timestamptz not null default now()
+);
+
