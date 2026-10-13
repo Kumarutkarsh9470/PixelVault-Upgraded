@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { api, formatTime, type LeaderboardEntry } from "../lib/api";
 import { Nameplate } from "../components/Nameplate";
-import { Sheet } from "../components/ui";
+import { Podium, Sheet, Skeleton } from "../components/ui";
 import { tracks } from "./Home";
 
 export function Ranks({ onBack }: { onBack: () => void }) {
@@ -34,17 +34,28 @@ export function Ranks({ onBack }: { onBack: () => void }) {
             </button>
           ))}
         </div>
-        {entries === null && <p className="muted">Loading…</p>}
+        {entries === null && <Skeleton rows={6} />}
         {entries?.length === 0 && <p className="muted">No times yet. Be the first.</p>}
-        <ol className="board">
-          {entries?.map((e) => (
-            <li key={e.rank}>
-              <span className="rank">{e.rank}</span>
-              <Nameplate name={e.name} frame={e.frame} />
-              <span className="time">{formatTime(e.totalMs)}</span>
-            </li>
-          ))}
-        </ol>
+        {entries && entries.length > 0 && (
+          <>
+            <Podium
+              entries={entries.slice(0, 3).map((e) => ({ name: e.name, frame: e.frame, value: formatTime(e.totalMs) }))}
+              render={(e) => <Nameplate name={e.name} frame={e.frame} />}
+            />
+            <ol className="board" start={4}>
+              {entries.slice(3).map((e) => (
+                <li key={e.rank} style={{ ["--i" as string]: e.rank }}>
+                  <span className="rank">{e.rank}</span>
+                  <Nameplate name={e.name} frame={e.frame} />
+                  <span className="time">
+                    {formatTime(e.totalMs)}
+                    <small className="muted">+{((e.totalMs - entries[0].totalMs) / 1000).toFixed(2)}</small>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </Sheet>
     </div>
   );

@@ -195,6 +195,11 @@ export default function App() {
               PIXEL<span>VAULT</span>
             </div>
             <p>Race, earn materials, and craft cosmetics you can always cash back out.</p>
+            <ul className="gate-points">
+              <li>Race, earn materials, craft cosmetics</li>
+              <li>Every item holds USDC you can take back</li>
+              <li>No seed phrase, no SOL, no fees</li>
+            </ul>
             <button className="primary big" onClick={login}>
               Sign in
             </button>

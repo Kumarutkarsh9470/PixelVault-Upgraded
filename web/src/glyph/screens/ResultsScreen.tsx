@@ -1,3 +1,4 @@
+import { AnimatedNumber } from "../../components/Fx";
 import { MaterialChip, Sheet } from "../../components/ui";
 import { formatDistance, type RunOutcome } from "../api";
 
@@ -24,11 +25,13 @@ export function ResultsScreen({
         {error && <p className="error">{error}</p>}
         {outcome && (
           <>
-            <div className="finish-time">{formatDistance(outcome.distanceMm)}</div>
-            {outcome.personalBest && <p className="good">New longest run!</p>}
+            <div className="result-time">
+              <AnimatedNumber value={outcome.distanceMm} format={formatDistance} duration={900} />
+            </div>
+            {outcome.personalBest && <p className="pb pop-in">New longest run</p>}
             <p className="eyebrow">Runes kept</p>
             {earned.length > 0 ? (
-              <div className="recipe">
+              <div className="recipe stagger">
                 {earned.map(([id, n]) => (
                   <MaterialChip key={id} id={id} amount={n} />
                 ))}

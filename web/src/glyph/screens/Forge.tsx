@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { formatUsdc } from "../../lib/api";
 import { isDeployed } from "../../lib/program";
 import { haptic } from "../../lib/telegram";
-import { MaterialChip, Sheet } from "../../components/ui";
+import { BackingMeter, MaterialChip, Sheet } from "../../components/ui";
 import { allItems, refundOf } from "../../state/catalog";
 import { useWallet } from "../../state/wallet";
 import { GLYPH_GAME_ID, useGlyph } from "../state";
@@ -58,7 +58,13 @@ export function Forge({ onBack }: { onBack: () => void }) {
             const canCraft = live && recipe.every(([m, n]) => (runes[m] ?? 0) >= n) && balances.usdc >= item.price && !busy;
 
             return (
-              <div key={item.key} className={`item-card ${open === item.key ? "selected" : ""}`} onClick={() => setOpen(item.key)}>
+              <div
+                key={item.key}
+                className={`item-card item-${tab} ${open === item.key ? "selected" : ""} ${equipped ? "equipped" : ""}`}
+                data-tilt
+                onClick={() => setOpen(item.key)}
+              >
+                {equipped && <span className="ribbon">Equipped</span>}
                 <div className="item-head">
                   <span className={`swatch swatch-${tab}`} style={{ ["--c" as string]: item.value }} />
                   <span className="item-main">
@@ -76,6 +82,7 @@ export function Forge({ onBack }: { onBack: () => void }) {
 
                 {open === item.key && (
                   <div className="item-detail">
+                    <BackingMeter price={item.price} backingBps={item.backingBps} />
                     <div className="recipe">
                       {recipe.map(([m, n]) => (
                         <MaterialChip key={m} id={m} amount={runes[m] ?? 0} need={n} />

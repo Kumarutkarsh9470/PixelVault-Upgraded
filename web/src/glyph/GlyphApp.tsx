@@ -134,6 +134,11 @@ export default function GlyphApp() {
               GLYPH<span>FORGE</span>
             </div>
             <p>Run the forge, gather runes, and forge cosmetics you can always cash back out.</p>
+            <ul className="gate-points">
+              <li>Run, gather runes, forge frames and auras</li>
+              <li>Every item holds USDC you can take back</li>
+              <li>No seed phrase, no SOL, no fees</li>
+            </ul>
             <button className="primary big" onClick={login}>
               Sign in
             </button>

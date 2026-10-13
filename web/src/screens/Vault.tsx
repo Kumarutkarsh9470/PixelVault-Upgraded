@@ -6,7 +6,7 @@ import { allItems, gameName, refundOf, type Item } from "../state/catalog";
 import { useWallet } from "../state/wallet";
 import { isDeployed } from "../lib/program";
 import { AnimatedNumber } from "../components/Fx";
-import { Sheet, Stat } from "../components/ui";
+import { BackingMeter, EmptyState, Sheet, Stat } from "../components/ui";
 import { WalletPanel } from "../components/WalletPanel";
 
 
@@ -59,15 +59,25 @@ export function Vault({ onBack }: { onBack: () => void }) {
           Every item holds USDC in a program-owned vault. Redeem any time — even if the game shuts down.
         </p>
 
-        {holdings.length === 0 && <p className="muted">Nothing here yet. Earn materials and craft in the Garage.</p>}
+        {holdings.length === 0 && (
+          <EmptyState
+            icon={
+              <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 5h16v14H4zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6M12 12h3" />
+              </svg>
+            }
+            title="Your vault is empty"
+            hint="Win medals, craft an item in the Garage, and its USDC backing shows up here, redeemable any time."
+          />
+        )}
 
         <div className="item-list">
           {holdings.map((item) => (
-            <div key={`${item.gameId}-${item.key}`} className="item-card" data-tilt>
+            <div key={`${item.gameId}-${item.key}`} className={`item-card item-${item.type}`} data-tilt>
               <div className="item-head">
                 <span
-                  className={`swatch ${item.type === "chassis" ? "swatch-model" : ""}`}
-                  style={item.type === "chassis" ? undefined : { background: item.value }}
+                  className={`swatch ${item.type === "chassis" ? "swatch-model" : item.type === "frame" ? "swatch-frame" : item.type === "aura" ? "swatch-aura" : "swatch-glow"}`}
+                  style={item.type === "chassis" ? undefined : { background: item.type === "frame" || item.type === "aura" ? undefined : item.value, ["--c" as string]: item.value }}
                 >
                   {item.type === "chassis" ? item.name.slice(0, 3).toUpperCase() : ""}
                 </span>
@@ -79,6 +89,7 @@ export function Vault({ onBack }: { onBack: () => void }) {
                 </span>
                 <span className="owned">×{owned(item)}</span>
               </div>
+              <BackingMeter price={item.price} backingBps={item.backingBps} count={owned(item)} />
               <div className="actions">
                 <button disabled={!!busy} onClick={() => act(() => redeem(item))}>
                   Redeem {formatUsdc(refundOf(item))}
@@ -118,7 +129,11 @@ export function Vault({ onBack }: { onBack: () => void }) {
 
         {stats && (
           <div className="transparency">
-            <h3>Protocol, live from the chain</h3>
+            <h3>
+              <span className="live-dot" />
+              Protocol, live from the chain
+            </h3>
+            <p className="muted small">Read straight from Solana devnet, not from our database.</p>
             <div className="stats">
               <Stat label="Total USDC backing" value={formatUsdc(stats.totalBacked)} />
               <Stat label="Vaults solvent" value={stats.solvent ? "Yes ✓" : "Check"} />

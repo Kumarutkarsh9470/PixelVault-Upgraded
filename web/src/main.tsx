@@ -8,6 +8,7 @@ import { DemoWalletProvider } from "./state/wallet";
 import "./styles.css";
 import "./fx.css";
 import "./race.css";
+import "./screens.css";
 
 // Inside Telegram: Privy sign-in and the real wallet. Anywhere else the same
 // screens run on a local demo wallet (the showcase), so the page is playable

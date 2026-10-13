@@ -6,7 +6,7 @@ import { sendToUnity } from "../lib/unity";
 import { allItems, type Item } from "../state/catalog";
 import { useGame } from "../state/game";
 import { useWallet } from "../state/wallet";
-import { MaterialChip, Sheet } from "../components/ui";
+import { BackingMeter, MaterialChip, Sheet } from "../components/ui";
 
 const TABS = [
   { type: "chassis", label: "Chassis" },
@@ -45,6 +45,7 @@ export function Garage({ onBack }: { onBack: () => void }) {
       <div className="spacer" />
 
       <Sheet>
+        <p className="eyebrow garage-eyebrow">Tap an item to preview it on your car</p>
         <div className="tabs">
           {TABS.map((t) => (
             <button
@@ -88,11 +89,17 @@ export function Garage({ onBack }: { onBack: () => void }) {
             const selected = preview?.key === item.key;
 
             return (
-              <div key={item.key} className={`item-card ${selected ? "selected" : ""}`} data-tilt onClick={() => setPreview(item)}>
+              <div
+                key={item.key}
+                className={`item-card item-${item.type} ${selected ? "selected" : ""} ${equipped ? "equipped" : ""}`}
+                data-tilt
+                onClick={() => setPreview(item)}
+              >
+                {equipped && <span className="ribbon">Equipped</span>}
                 <div className="item-head">
                   <span
-                    className={`swatch ${item.type === "chassis" ? "swatch-model" : ""}`}
-                    style={item.type === "chassis" ? undefined : { background: item.value }}
+                    className={`swatch ${item.type === "chassis" ? "swatch-model" : "swatch-glow"}`}
+                    style={item.type === "chassis" ? undefined : { background: item.value, ["--c" as string]: item.value }}
                   >
                     {item.type === "chassis" ? item.name.slice(0, 3).toUpperCase() : ""}
                   </span>
@@ -111,6 +118,7 @@ export function Garage({ onBack }: { onBack: () => void }) {
 
                 {selected && (
                   <div className="item-detail">
+                    <BackingMeter price={item.price} backingBps={item.backingBps} />
                     {recipe.length > 0 && (
                       <div className="recipe">
                         {recipe.map(([m, n]) => (

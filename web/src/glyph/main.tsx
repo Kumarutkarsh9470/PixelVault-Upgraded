@@ -5,6 +5,8 @@ import { AppProviders } from "../providers";
 import { DemoWalletProvider } from "../state/wallet";
 import "../styles.css";
 import "../fx.css";
+import "../race.css";
+import "../screens.css";
 import GlyphApp from "./GlyphApp";
 import { DemoGlyphProvider, GlyphProvider } from "./state";
 

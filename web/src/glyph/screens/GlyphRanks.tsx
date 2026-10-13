@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Nameplate } from "../../components/Nameplate";
-import { Sheet } from "../../components/ui";
+import { Podium, Sheet, Skeleton } from "../../components/ui";
 import { formatDistance, glyphApi, type GlyphEntry } from "../api";
 
 export function GlyphRanks({ onBack }: { onBack: () => void }) {
@@ -24,17 +24,25 @@ export function GlyphRanks({ onBack }: { onBack: () => void }) {
         <span />
       </header>
       <Sheet>
-        {entries === null && <p className="muted">Loading…</p>}
+        {entries === null && <Skeleton rows={6} />}
         {entries?.length === 0 && <p className="muted">No runs yet. Be the first.</p>}
-        <ol className="board">
-          {entries?.map((e) => (
-            <li key={e.rank}>
-              <span className="rank">{e.rank}</span>
-              <Nameplate name={e.name} frame={e.frame} />
-              <span className="time">{formatDistance(e.distanceMm)}</span>
-            </li>
-          ))}
-        </ol>
+        {entries && entries.length > 0 && (
+          <>
+            <Podium
+              entries={entries.slice(0, 3).map((e) => ({ name: e.name, frame: e.frame, value: formatDistance(e.distanceMm) }))}
+              render={(e) => <Nameplate name={e.name} frame={e.frame} />}
+            />
+            <ol className="board" start={4}>
+              {entries.slice(3).map((e) => (
+                <li key={e.rank} style={{ ["--i" as string]: e.rank }}>
+                  <span className="rank">{e.rank}</span>
+                  <Nameplate name={e.name} frame={e.frame} />
+                  <span className="time">{formatDistance(e.distanceMm)}</span>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </Sheet>
     </div>
   );
