@@ -145,4 +145,4 @@ create table if not exists faucet_grants (
   wallet     text primary key,
   created_at timestamptz not null default now()
 );
-
+alter table faucet_grants add column if not exists ip text;

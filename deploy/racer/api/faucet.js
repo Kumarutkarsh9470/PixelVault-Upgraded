@@ -13,6 +13,8 @@ import { HttpError, readBody, route } from "./_lib/http.js";
 const chain = JSON.parse(fs.readFileSync(new URL("../data/chain.json", import.meta.url)));
 const FAUCET_MICRO_USDC = Number(process.env.FAUCET_MICRO_USDC || 2_000_000);
 const DAILY_GRANTS = Number(process.env.FAUCET_DAILY_GRANTS || 200);
+/** One address can spin up wallets for free; it cannot spin up IPs as cheaply. */
+const PER_IP_DAILY = Number(process.env.FAUCET_PER_IP_DAILY || 3);
 const TOKEN = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const ATA_PROGRAM = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 
@@ -32,11 +34,15 @@ export default route(["GET", "POST"], async (req) => {
     throw new HttpError(400, "pass a Solana wallet address as `wallet`");
   }
 
-  const [{ n }] = await sql()`select count(*)::int as n from faucet_grants where created_at > now() - interval '1 day'`;
+  const ip = String(req.headers["x-forwarded-for"] ?? req.socket?.remoteAddress ?? "").split(",")[0].trim() || null;
+  const [{ n, mine }] = await sql()`
+    select count(*)::int as n, count(*) filter (where ip = ${ip})::int as mine
+    from faucet_grants where created_at > now() - interval '1 day'`;
   if (n >= DAILY_GRANTS) throw new HttpError(429, "the faucet is empty for today; try tomorrow");
+  if (ip && mine >= PER_IP_DAILY) throw new HttpError(429, "too many faucet requests from this network today");
 
   // Claim first, atomically, so two concurrent requests cannot both be paid.
-  const claimed = await sql()`insert into faucet_grants (wallet) values (${owner.toBase58()}) on conflict (wallet) do nothing returning wallet`;
+  const claimed = await sql()`insert into faucet_grants (wallet, ip) values (${owner.toBase58()}, ${ip}) on conflict (wallet) do nothing returning wallet`;
   if (claimed.length === 0) throw new HttpError(409, "this wallet already received its test USDC");
 
   try {
