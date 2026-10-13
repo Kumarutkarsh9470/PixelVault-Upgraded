@@ -25,6 +25,11 @@ import {
   craftInstructions,
   createSponsor,
   MEMO_PROGRAM,
+  OPEN_RUN_DISCRIMINATOR,
+  VERIFY_RUN_DISCRIMINATOR,
+  WRITE_RUN_DISCRIMINATOR,
+  CLOSE_RUN_DISCRIMINATOR,
+  COMPUTE_BUDGET_PROGRAM,
   redeemInstruction,
   SYSTEM_PROGRAM,
   TOKEN_PROGRAM,
@@ -116,13 +121,13 @@ test("refuses draining the sponsor with a transfer or a priority fee", async () 
     accounts: [],
     data: new Uint8Array([3, ...getU64Encoder().encode(5_000_000n)]),
   };
-  assert.match(sponsor.inspect(await signed([priority, ...(await craft())]), player).reason!, /not sponsored/);
+  assert.match(sponsor.inspect(await signed([priority, ...(await craft())]), player).reason!, /only a compute unit limit/);
 });
 
 test("refuses the sponsor in any role but craft's rent payer", async () => {
   // A craft where the sponsor is the player and the player pays rent.
   const ixs = await craft(address(quote.feePayer), player);
-  assert.match(sponsor.inspect(await signed(ixs), player).reason!, /rent payer of craft/);
+  assert.match(sponsor.inspect(await signed(ixs), player).reason!, /never act as a player/);
 });
 
 test("refuses anything that is not craft or redeem in PixelVault, and empty transactions", async () => {
@@ -131,7 +136,7 @@ test("refuses anything that is not craft or redeem in PixelVault, and empty tran
     accounts: [{ address: player, role: AccountRole.READONLY_SIGNER }],
     data: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
   };
-  assert.match(sponsor.inspect(await signed([other]), player).reason!, /only craft and redeem/);
+  assert.match(sponsor.inspect(await signed([other]), player).reason!, /only craft, redeem and run verification/);
   const memo: Instruction = {
     programAddress: MEMO_PROGRAM,
     accounts: [{ address: player, role: AccountRole.READONLY_SIGNER }],
@@ -169,4 +174,38 @@ test("one craft and one redeem per transaction", async () => {
 
 test("submit refuses before touching the network", async () => {
   await assert.rejects(sponsor.submit(await signed(await craft(stranger), false), player), /must be your wallet/);
+});
+
+const runIx = (disc: Uint8Array, accounts: { address: Address; role: AccountRole }[]): Instruction => ({
+  programAddress: address(deployment.programId),
+  accounts,
+  data: new Uint8Array([...disc, 0, 0, 0, 0, 0, 0, 0, 0]),
+});
+const openRun = () => runIx(OPEN_RUN_DISCRIMINATOR, [
+  { address: address(quote.feePayer), role: AccountRole.WRITABLE_SIGNER },
+  { address: player, role: AccountRole.READONLY_SIGNER },
+  { address: stranger, role: AccountRole.READONLY },
+]);
+const writeRun = () => runIx(WRITE_RUN_DISCRIMINATOR, [{ address: player, role: AccountRole.READONLY_SIGNER }, { address: stranger, role: AccountRole.WRITABLE }]);
+const verifyRun = () => runIx(VERIFY_RUN_DISCRIMINATOR, [{ address: player, role: AccountRole.READONLY_SIGNER }, { address: stranger, role: AccountRole.WRITABLE }]);
+const closeRun = () => runIx(CLOSE_RUN_DISCRIMINATOR, [
+  { address: player, role: AccountRole.READONLY_SIGNER },
+  { address: stranger, role: AccountRole.WRITABLE },
+  { address: address(quote.feePayer), role: AccountRole.WRITABLE },
+]);
+const computeLimit = (units: number): Instruction => {
+  const data = new Uint8Array(5);
+  data[0] = 2;
+  new DataView(data.buffer).setUint32(1, units, true);
+  return { programAddress: COMPUTE_BUDGET_PROGRAM, accounts: [], data };
+};
+
+test("sponsors run verification with a compute limit, and refuses prices and oversize limits", async () => {
+  assert.equal(sponsor.inspect(await signed([openRun(), writeRun()]), player).kind, "verify");
+  assert.equal(sponsor.inspect(await signed([computeLimit(1_350_000), verifyRun()]), player).kind, "verify");
+  assert.equal(sponsor.inspect(await signed([closeRun()]), player).kind, "verify");
+  assert.match(sponsor.inspect(await signed([computeLimit(2_000_000), verifyRun()]), player).reason!, /ceiling/);
+  const price: Instruction = { programAddress: COMPUTE_BUDGET_PROGRAM, accounts: [], data: new Uint8Array([3, 1, 0, 0, 0, 0, 0, 0, 0]) };
+  assert.match(sponsor.inspect(await signed([price, verifyRun()]), player).reason!, /unit limit/);
+  assert.match(sponsor.inspect(await signed([verifyRun(), ...(await craft())]), player).reason!, /on its own/);
 });

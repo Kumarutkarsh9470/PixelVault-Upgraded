@@ -19,6 +19,7 @@ export default defineConfig({
       input: {
         racer: fileURLToPath(new URL("index.html", import.meta.url)),
         glyph: fileURLToPath(new URL("glyph.html", import.meta.url)),
+        solvency: fileURLToPath(new URL("solvency.html", import.meta.url)),
       },
     },
   },

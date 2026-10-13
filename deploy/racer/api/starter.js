@@ -22,6 +22,7 @@ function funder() {
 }
 
 export default route(["POST"], async (req) => {
+  if (chain.cluster !== "devnet") throw new HttpError(404, "the starter grant only exists on devnet");
   const body = readBody(req);
   const user = verifyInitData(body.initData);
   const player = await upsertPlayer(user, body.wallet);

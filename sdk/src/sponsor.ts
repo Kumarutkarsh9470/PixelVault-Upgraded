@@ -19,14 +19,39 @@ import {
 
 import { ED25519_PROGRAM, MEMO_PROGRAM, TOKEN_PROGRAM } from "./accounts.ts";
 import type { Deployment } from "./deployment.ts";
-import { CRAFT_DISCRIMINATOR, CRAFT_RENT_PAYER_INDEX, REDEEM_DISCRIMINATOR } from "./instructions.ts";
+import { CRAFT_DISCRIMINATOR, REDEEM_DISCRIMINATOR } from "./instructions.ts";
 import type { SponsorQuote } from "./transaction.ts";
 
-export type SponsoredKind = "craft" | "redeem" | "route" | "withdraw";
+export type SponsoredKind = "craft" | "redeem" | "route" | "withdraw" | "verify";
 
 export type SponsorVerdict = { kind: SponsoredKind; reason?: undefined } | { kind?: undefined; reason: string };
 
 export type SponsorRpc = Rpc<GetLatestBlockhashApi & SendTransactionApi & GetSignatureStatusesApi>;
+
+export const COMPUTE_BUDGET_PROGRAM = address("ComputeBudget111111111111111111111111111111");
+
+/** Anchor discriminators of the run-verification instructions: sha256("global:<name>")[0..8]. */
+export const OPEN_RUN_DISCRIMINATOR = new Uint8Array([252, 181, 149, 94, 46, 20, 82, 14]);
+export const WRITE_RUN_DISCRIMINATOR = new Uint8Array([138, 229, 27, 182, 26, 47, 106, 119]);
+export const VERIFY_RUN_DISCRIMINATOR = new Uint8Array([22, 196, 183, 200, 183, 232, 150, 234]);
+export const CLOSE_RUN_DISCRIMINATOR = new Uint8Array([31, 61, 130, 76, 74, 147, 171, 204]);
+
+/**
+ * What the sponsor pays for in PixelVault, and where its own key may appear.
+ * The program decides what it does with that role; this only limits which
+ * roles are on offer.
+ *   craft      account 1: rent_payer for a newly minted item
+ *   open_run   account 0: payer for the buffer a run is verified in
+ *   close_run  account 2: where that buffer's rent goes back to
+ */
+const INSTRUCTIONS: { discriminator: Uint8Array; kind: "craft" | "redeem" | "verify"; sponsorPosition: number | null }[] = [
+  { discriminator: CRAFT_DISCRIMINATOR, kind: "craft", sponsorPosition: 1 },
+  { discriminator: REDEEM_DISCRIMINATOR, kind: "redeem", sponsorPosition: null },
+  { discriminator: OPEN_RUN_DISCRIMINATOR, kind: "verify", sponsorPosition: 0 },
+  { discriminator: WRITE_RUN_DISCRIMINATOR, kind: "verify", sponsorPosition: null },
+  { discriminator: VERIFY_RUN_DISCRIMINATOR, kind: "verify", sponsorPosition: null },
+  { discriminator: CLOSE_RUN_DISCRIMINATOR, kind: "verify", sponsorPosition: 2 },
+];
 
 export type SponsorOptions = {
   deployment: Pick<Deployment, "programId" | "usdcMint">;
@@ -35,6 +60,8 @@ export type SponsorOptions = {
   rpc: SponsorRpc;
   /** Smallest USDC withdrawal to pay for, in base units. Default $0.10, so dust cannot burn fees. */
   minWithdraw?: bigint;
+  /** Highest compute-unit limit a client may request. Default 1.4M, what one transaction can use. */
+  maxComputeUnits?: number;
   /**
    * Called before every submission with the player and what the transaction
    * does. Throw to refuse: this is where a host applies its rate limits.
@@ -57,6 +84,7 @@ export type Sponsor = {
 };
 
 const TRANSFER_CHECKED = 12;
+const SET_COMPUTE_UNIT_LIMIT = 2;
 const startsWith = (data: ArrayLike<number>, prefix: Uint8Array) =>
   data.length >= prefix.length && prefix.every((b, i) => data[i] === b);
 const allZero = (bytes: ArrayLike<number> | null | undefined) => !bytes || Array.from(bytes).every((b) => b === 0);
@@ -67,9 +95,11 @@ export async function createSponsor(options: SponsorOptions): Promise<Sponsor> {
   const programId = address(options.deployment.programId);
   const usdcMint = address(options.deployment.usdcMint);
   const minWithdraw = options.minWithdraw ?? 100_000n;
-  // Only these programs may appear. The Compute Budget program is deliberately
-  // absent: it would let a client attach an arbitrary priority fee the sponsor pays.
-  const sponsoredPrograms = new Set<string>([programId, MEMO_PROGRAM, ED25519_PROGRAM, TOKEN_PROGRAM]);
+  const maxComputeUnits = options.maxComputeUnits ?? 1_400_000;
+  // Only these programs may appear. The Compute Budget program is allowed only
+  // to raise the unit limit: a priority fee would let a client decide what the
+  // sponsor pays.
+  const sponsoredPrograms = new Set<string>([programId, MEMO_PROGRAM, ED25519_PROGRAM, TOKEN_PROGRAM, COMPUTE_BUDGET_PROGRAM]);
   const rpc = options.rpc;
 
   const inspect = (bytes: Uint8Array, player: Address): SponsorVerdict => {
@@ -99,24 +129,32 @@ export async function createSponsor(options: SponsorOptions): Promise<Sponsor> {
       return refuse("transaction is missing your signature");
     }
 
-    const seen = { craft: 0, redeem: 0, withdraw: 0 };
+    const seen = { craft: 0, redeem: 0, withdraw: 0, verify: 0 };
     for (const ix of message.instructions) {
       const program = keysList[ix.programAddressIndex];
-      const data: ArrayLike<number> & { buffer?: ArrayBufferLike; byteOffset?: number } = ix.data ?? new Uint8Array();
+      const data: ArrayLike<number> = ix.data ?? new Uint8Array();
       const accounts = ix.accountIndices ?? [];
       if (!sponsoredPrograms.has(program)) {
         return refuse(`program ${program} is not sponsored`);
       }
-      const isCraft = program === programId && startsWith(data, CRAFT_DISCRIMINATOR);
+      if (program === COMPUTE_BUDGET_PROGRAM) {
+        if (data.length < 1 || data[0] !== SET_COMPUTE_UNIT_LIMIT) return refuse("only a compute unit limit may be sponsored");
+        if (data.length !== 5) return refuse("malformed compute unit limit");
+        const units = new DataView(Uint8Array.from(data).buffer).getUint32(1, true);
+        if (units > maxComputeUnits) return refuse(`compute unit limit ${units} is above the ceiling`);
+        continue;
+      }
+      const pv = program === programId ? INSTRUCTIONS.find((i) => startsWith(data, i.discriminator)) : undefined;
+      if (program === programId && !pv) {
+        return refuse("only craft, redeem and run verification are sponsored");
+      }
       for (const [position, keyIndex] of accounts.entries()) {
-        if (keyIndex === 0 && !(isCraft && position === CRAFT_RENT_PAYER_INDEX)) {
-          return refuse("instructions may only use the sponsor as the rent payer of craft");
+        if (keyIndex === 0 && position !== (pv?.sponsorPosition ?? null)) {
+          return refuse("the sponsor may only pay rent and fees, never act as a player");
         }
       }
-      if (program === programId) {
-        if (isCraft) seen.craft++;
-        else if (startsWith(data, REDEEM_DISCRIMINATOR)) seen.redeem++;
-        else return refuse("only craft and redeem are sponsored");
+      if (pv) {
+        seen[pv.kind]++;
       } else if (program === TOKEN_PROGRAM) {
         // TransferChecked: [source, mint, destination, authority], data = [12, amount u64, decimals u8].
         if (data.length !== 10 || data[0] !== TRANSFER_CHECKED || accounts.length !== 4) {
@@ -133,6 +171,7 @@ export async function createSponsor(options: SponsorOptions): Promise<Sponsor> {
     const kinds = (Object.entries(seen) as [keyof typeof seen, number][]).filter(([, n]) => n > 0).map(([kind]) => kind);
     if (kinds.length === 0) return refuse("nothing to sponsor");
     if (seen.withdraw > 0 && kinds.length > 1) return refuse("withdrawals must be sent on their own");
+    if (seen.verify > 0 && (seen.craft > 0 || seen.redeem > 0)) return refuse("run verification must be sent on its own");
     if (seen.craft > 1 || seen.redeem > 1) return refuse("one craft and one redeem per transaction");
     return { kind: seen.craft && seen.redeem ? "route" : kinds[0] };
   };

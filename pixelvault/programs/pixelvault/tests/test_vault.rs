@@ -652,3 +652,43 @@ fn supply_cap_is_enforced() {
     craft(&mut w, &item, 0).expect("first unit is within supply");
     expect_error(craft(&mut w, &item, 1), PixelVaultError::SupplyCapReached);
 }
+
+#[test]
+fn admin_role_transfers_and_the_old_key_loses_it() {
+    let mut w = setup(0);
+    let successor = Keypair::new();
+    w.svm.airdrop(&successor.pubkey(), 1_000_000_000).unwrap();
+    let protocol = w.protocol;
+    let admin = w.admin.insecure_clone();
+
+    let transfer = Instruction::new_with_bytes(
+        pixelvault::id(),
+        &pixelvault::instruction::TransferAdmin { new_admin: successor.pubkey() }.data(),
+        pixelvault::accounts::TransferAdmin { admin: admin.pubkey(), protocol }.to_account_metas(None),
+    );
+    send(&mut w.svm, &admin, &[&admin], &[transfer]).expect("transfer_admin failed");
+
+    let pause = move |signer: Pubkey| {
+        Instruction::new_with_bytes(
+            pixelvault::id(),
+            &pixelvault::instruction::UpdateProtocol {
+                crafting_paused: Some(true),
+                fee_bps: None,
+                max_backed_per_player: None,
+                global_backed_cap: None,
+            }
+            .data(),
+            pixelvault::accounts::UpdateProtocol { admin: signer, protocol }.to_account_metas(None),
+        )
+    };
+    expect_error(send(&mut w.svm, &admin, &[&admin], &[pause(admin.pubkey())]), PixelVaultError::Unauthorized);
+    send(&mut w.svm, &successor, &[&successor], &[pause(successor.pubkey())]).expect("the new admin must hold the switches");
+
+    // The previous admin cannot take the role back either.
+    let steal = Instruction::new_with_bytes(
+        pixelvault::id(),
+        &pixelvault::instruction::TransferAdmin { new_admin: admin.pubkey() }.data(),
+        pixelvault::accounts::TransferAdmin { admin: admin.pubkey(), protocol }.to_account_metas(None),
+    );
+    expect_error(send(&mut w.svm, &admin, &[&admin], &[steal]), PixelVaultError::Unauthorized);
+}

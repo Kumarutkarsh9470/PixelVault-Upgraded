@@ -51,6 +51,11 @@ pub mod pixelvault {
         )
     }
 
+    /// Hand the admin role to another key, for example a multisig before mainnet.
+    pub fn transfer_admin(ctx: Context<TransferAdmin>, new_admin: Pubkey) -> Result<()> {
+        instructions::transfer_admin::handle_transfer_admin(ctx, new_admin)
+    }
+
     /// Permissionless: register a game, its grant-signing key and its USDC vault.
     pub fn register_game(
         ctx: Context<RegisterGame>,
