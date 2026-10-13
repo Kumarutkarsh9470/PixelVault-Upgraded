@@ -23,7 +23,8 @@ The submission is a working product, live on Solana devnet as a Telegram Mini Ap
 - **Neon Racer**, a Unity racing game. Medals earn materials; materials plus USDC craft chassis, underglow and trails; every item shows its refund value before you pay; the Vault redeems it in one tap.
 - **Glyph Forge**, a second game built as an outside studio would build it, through `@pixelvault/sdk` only, with its own backend and its own on-chain grant key. Every run is replayed on the server from the player's inputs. Items move between the two games in a single transaction, at par.
 - **Embedded wallets with no SOL.** Telegram login creates a Privy wallet; a relayer sponsors every fee and only co-signs a strict allowlist of instructions.
-- **Twelve adversarial program tests**, SDK tests against the compiled program, relayer attack tests, and a threat model that maps each attack to the test that stops it, all in CI.
+- **A studio integrates with one command.** `npx pixelvault setup` registers a game and its item classes from a catalog file and writes the addresses the SDK needs; `createSponsor` gives any studio the fee-payer relayer with its safety rules built in, behind their own login. A third game was registered on devnet this way with a throwaway key: https://explorer.solana.com/address/F8Wb3An2AjWC2xGMzaJHskSvpzxtFeqCzYvL4L3CduvN?cluster=devnet
+- **Twelve adversarial program tests**, SDK tests against the compiled program, sponsor-rule tests on real compiled transactions, relayer attack tests, and a threat model that maps each attack to the test that stops it, all in CI.
 
 The on-chain program is about 1,200 lines of Anchor across eight instructions. It uses Token-2022 semi-fungible mints per item class, an Ed25519 precompile check for server-signed craft grants with per-player sequence numbers, and a solvency assertion on every craft, redeem and backing raise.
 
