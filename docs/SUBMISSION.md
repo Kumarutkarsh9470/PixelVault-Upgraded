@@ -89,3 +89,44 @@ This repository is a new codebase started during the Crypto World's Fair window.
 | Superteam Earn: Panta API, Solami | Only if the listing does not require using their product |
 
 Every other Superteam Earn track is regional and restricted to residents of that country. Submitting to those risks disqualification under the global rules.
+
+## Colosseum form answers (copy-paste, within the character limits)
+
+- Project website: https://pixelvault-racer.vercel.app
+- Live product link: https://t.me/pixelvault_racer_bot/race
+- Chains: Solana
+- Category: Gaming Infrastructure
+- Mobile-focused dApp: yes (Telegram Mini App)
+
+### What are you building, and who is it for? (1000)
+
+PixelVault is in-game purchases you can refund. When a player crafts an item, most of its price is locked as USDC in a vault owned by a Solana program, not the studio. Burning the item returns that USDC at any time, without the studio's server. Studios choose each item's backing inside a 50-95% band compiled into the program, can raise it but never lower it, and cannot withdraw the vault or pause redemption.
+
+Live on devnet as a Telegram Mini App: Neon Racer, a Unity racing game where medals earn materials, materials plus USDC craft cosmetics, and the Vault redeems them in one tap. A second game, Glyph Forge, was built as an outside studio would, through the public SDK only, and items move between the two games in one transaction at par. Players never hold SOL: Telegram login creates the wallet, a relayer pays fees.
+
+For players who stopped trusting web3 games, and for studios that want to charge more without asking for trust. A studio integrates with one command.
+
+### Why did you decide to build this, and why build it now? (1000)
+
+Every web3 game economy I have watched died the same way: a token went to zero, NFTs found no buyers, or a studio shut down and every item it sold became worthless. The lesson players took is never to spend. I built the per-game-token version in an earlier hackathon and saw why it fails: a token's price is a market, and markets leave.
+
+The fix is not a better token. It is a floor the player can always collect: an item that holds USDC the studio cannot touch. That needs cheap, final transactions, semi-fungible tokens, and wallets players never manage. Solana, Token-2022 and embedded wallets inside Telegram make all three true now, which is why the whole product fits inside a chat app with no seed phrase and no SOL.
+
+Telegram mini-games now have hundreds of millions of players and no answer to "where did my money go". Studios there already have the players and the payments problem; they lack the guarantee. PixelVault is the guarantee, shipped as an SDK.
+
+### What technologies are you using (one line)
+
+Solana devnet, Anchor 1.2 (Rust), Token-2022 semi-fungible mints, Ed25519 precompile for server-signed craft grants, @solana/kit, litesvm for program tests, Privy embedded Solana wallets with seamless Telegram login, Telegram Mini Apps, Unity 6 WebGL (two games), React 19 + Vite, Vercel serverless functions, Neon Postgres, GitHub Actions CI, pixelvault-sdk on npm. AI tools: Claude Code was used throughout for development, tests and docs.
+
+### How does your product use these chains? (500)
+
+Everything that holds value is on Solana. One Anchor program owns a USDC vault per game (a token account owned by the game's program address), mints Token-2022 semi-fungible items per item class, and enforces the backing band, solvency on every craft and redeem, and single-use Ed25519 craft grants with per-player sequence numbers. Players sign from Privy embedded wallets; a relayer pays fees, so they never hold SOL. The second game registers its own vault and grant key on the same program.
+
+### Please share any important context about your repo (500)
+
+One repository holds the whole product: the Anchor program and its litesvm tests (pixelvault/), both Unity games (game/, glyph/), the React Mini App (web/), the Vercel functions and relayer (deploy/racer/), the SDK published as pixelvault-sdk (sdk/), and tools. The verified-runs branch holds on-chain race verification (the program re-drives player inputs), tested but not yet deployed; it is the next release. Earlier Initia hackathon work shares no code and is disclosed in the README.
+
+### Access instructions
+
+Open https://t.me/pixelvault_racer_bot/race in Telegram: login is automatic and new players receive 2 test USDC. In any desktop browser, https://pixelvault-racer.vercel.app runs in showcase mode on a demo wallet with every screen and both games playable, no login needed. Devnet only; nothing real is spent.
+
