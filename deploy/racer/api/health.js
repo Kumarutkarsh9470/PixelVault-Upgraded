@@ -60,6 +60,6 @@ export default route(["GET"], async (_req, res) => {
 
   const ok = Object.values(checks).every((c) => c.ok);
   res.setHeader("Cache-Control", "no-store");
-  res.status(ok ? 200 : 503);
-  return { ok, checks, latencyMs: Date.now() - started, at: new Date().toISOString() };
+  // Send directly so a failing check answers 503, which is what a monitor alerts on.
+  res.status(ok ? 200 : 503).json({ ok, checks, latencyMs: Date.now() - started, at: new Date().toISOString() });
 });
