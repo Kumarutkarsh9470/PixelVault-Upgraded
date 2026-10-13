@@ -18,3 +18,4 @@ node --experimental-global-webcrypto --import tsx --test test/${1:-*}.test.ts > 
 grep -E "^# (tests|pass|fail|skipped)|^not ok|^ok" /tmp/pixelvault-sdk-test.log | head -40
 # Show why the first failure failed.
 grep -m1 -A25 "^not ok" /tmp/pixelvault-sdk-test.log | grep -vE "^\s*(at |\.\.\.)" | head -30
+grep -q "^# fail 0" /tmp/pixelvault-sdk-test.log
